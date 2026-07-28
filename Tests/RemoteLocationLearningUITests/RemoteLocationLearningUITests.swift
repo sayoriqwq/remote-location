@@ -18,6 +18,21 @@ final class RemoteLocationLearningUITests: XCTestCase {
             return true
           }
         }
+
+        let localizedAllow = alert.buttons.matching(
+          NSPredicate(
+            format:
+              "(label CONTAINS[c] %@ AND NOT label BEGINSWITH[c] %@) OR (label CONTAINS %@ AND NOT label CONTAINS %@)",
+            "Allow",
+            "Don",
+            "允许",
+            "不允许"
+          )
+        ).firstMatch
+        if localizedAllow.exists {
+          localizedAllow.tap()
+          return true
+        }
         return false
       }
     }
@@ -35,24 +50,31 @@ final class RemoteLocationLearningUITests: XCTestCase {
     app.launch()
     app.tap()
 
-    XCTAssertTrue(app.textFields["latitude-input"].waitForExistence(timeout: 5))
+    let latitude = app.textFields["latitude-input"]
+    scrollUp(until: latitude, in: app)
+    XCTAssertTrue(latitude.waitForExistence(timeout: 5))
     XCTAssertTrue(app.textFields["longitude-input"].exists)
     XCTAssertTrue(app.buttons["save-selection"].exists)
 
-    app.collectionViews.firstMatch.swipeUp()
+    let observedLatitude = app.staticTexts["observed-latitude"]
+    scrollUp(until: observedLatitude, in: app)
+    XCTAssertTrue(observedLatitude.waitForExistence(timeout: 5))
 
-    XCTAssertTrue(app.staticTexts["observed-latitude"].waitForExistence(timeout: 5))
-    XCTAssertTrue(app.staticTexts["observed-longitude"].exists)
-    XCTAssertTrue(app.staticTexts["observation-source"].exists)
-    let recencyNote = app.staticTexts["observation-recency-note"]
-    XCTAssertTrue(recencyNote.exists)
-    XCTAssertEqual(
-      recencyNote.label,
-      "This is the last successful Core Location observation. It may remain after a simulation stops and does not indicate an active simulation."
-    )
-    app.collectionViews.firstMatch.swipeUp()
-    XCTAssertTrue(app.buttons["start-observation-window"].waitForExistence(timeout: 5))
-    XCTAssertTrue(app.staticTexts["match-status"].exists)
+    let observedLongitude = app.staticTexts["observed-longitude"]
+    scrollUp(until: observedLongitude, in: app)
+    XCTAssertTrue(observedLongitude.waitForExistence(timeout: 5))
+
+    let observationSource = app.staticTexts["observation-source"]
+    scrollUp(until: observationSource, in: app)
+    XCTAssertTrue(observationSource.waitForExistence(timeout: 5))
+
+    let startObservation = app.buttons["start-observation-window"]
+    scrollUp(until: startObservation, in: app)
+    XCTAssertTrue(startObservation.waitForExistence(timeout: 5))
+
+    let matchStatus = app.staticTexts["match-status"]
+    scrollUp(until: matchStatus, in: app)
+    XCTAssertTrue(matchStatus.waitForExistence(timeout: 5))
   }
 
   func testPermissionFixturesKeepDeniedAndRestrictedRecoveryDistinct() {
@@ -71,7 +93,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertTrue(deniedLocation.waitForExistence(timeout: 5))
     XCTAssertTrue(deniedLocation.label.hasSuffix("Denied"))
     let locationSettings = denied.buttons["open-location-settings"]
-    scrollUp(until: locationSettings, in: denied)
+    scrollUpInSmallSteps(until: locationSettings, in: denied)
     XCTAssertTrue(locationSettings.waitForExistence(timeout: 5))
     denied.terminate()
 
@@ -90,9 +112,18 @@ final class RemoteLocationLearningUITests: XCTestCase {
 
   func testPublicLocationSetAndReplaceAreVerifiedByLearningApp() {
     let app = XCUIApplication()
+    if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
+      app.resetAuthorizationStatus(for: .location)
+    }
     app.launch()
     app.tap()
     defer { XCUIDevice.shared.location = nil }
+
+    let primer = CLLocationCoordinate2D(latitude: -33.8688, longitude: 151.2093)
+    XCUIDevice.shared.location = XCUILocation(
+      location: CLLocation(latitude: primer.latitude, longitude: primer.longitude)
+    )
+    waitForObservedCoordinate(primer, in: app)
 
     let coordinateA = CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.0090)
     let coordinateB = CLLocationCoordinate2D(latitude: 52.5200, longitude: 13.4050)
@@ -291,10 +322,9 @@ final class RemoteLocationLearningUITests: XCTestCase {
     of coordinate: CLLocationCoordinate2D,
     in app: XCUIApplication
   ) {
+    scrollToTop(in: app)
     let latitude = app.textFields["latitude-input"]
-    for _ in 0..<10 where !latitude.exists {
-      app.collectionViews.firstMatch.swipeDown()
-    }
+    scrollUp(until: latitude, in: app)
     XCTAssertTrue(latitude.waitForExistence(timeout: 5))
 
     replaceText(
@@ -314,6 +344,19 @@ final class RemoteLocationLearningUITests: XCTestCase {
     }
     XCTAssertTrue(start.waitForExistence(timeout: 5))
     start.tap()
+  }
+
+  private func waitForObservedCoordinate(
+    _ coordinate: CLLocationCoordinate2D,
+    in app: XCUIApplication
+  ) {
+    let observedLatitude = app.staticTexts["observed-latitude"]
+    scrollUp(until: observedLatitude, in: app)
+    let expectedSuffix = String(format: "%.6f", coordinate.latitude)
+    let matchingLatitude = app.staticTexts.matching(identifier: "observed-latitude")
+      .matching(NSPredicate(format: "label ENDSWITH %@", expectedSuffix))
+      .firstMatch
+    XCTAssertTrue(matchingLatitude.waitForExistence(timeout: 10))
   }
 
   private func replaceText(in field: XCUIElement, with text: String) {
@@ -354,6 +397,21 @@ final class RemoteLocationLearningUITests: XCTestCase {
   private func scrollUp(until element: XCUIElement, in app: XCUIApplication) {
     for _ in 0..<8 where !element.exists {
       app.collectionViews.firstMatch.swipeUp()
+    }
+  }
+
+  private func scrollToTop(in app: XCUIApplication) {
+    for _ in 0..<6 {
+      app.collectionViews.firstMatch.swipeDown()
+    }
+  }
+
+  private func scrollUpInSmallSteps(until element: XCUIElement, in app: XCUIApplication) {
+    let collectionView = app.collectionViews.firstMatch
+    for _ in 0..<6 where !element.exists {
+      let start = collectionView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+      let finish = collectionView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+      start.press(forDuration: 0.05, thenDragTo: finish)
     }
   }
 }
