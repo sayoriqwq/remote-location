@@ -66,7 +66,14 @@ public struct ManualSimulationSession: Equatable, Sendable {
 
   public mutating func select(_ location: SelectedLocation) {
     selected = location
-    status = .selected(location)
+    switch status {
+    case .noSelection, .selected, .stopped:
+      status = .selected(location)
+    case .failed where activeAppliedRequest == nil:
+      status = .selected(location)
+    case .applying, .applied, .appliedNotVerified, .verified, .failed:
+      break
+    }
   }
 
   @discardableResult

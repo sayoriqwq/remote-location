@@ -21,6 +21,18 @@ final class ControllerLinkViewModel: ObservableObject {
   private var mayAttemptConnection = true
   private var hasPairingCandidate = false
 
+  #if DEBUG
+    private static let e2eFixtureIdentity = try! ControllerIdentity(
+      fingerprint: Data(repeating: 0, count: 32)
+    )
+
+    private var usesE2EFixture: Bool {
+      ProcessInfo.processInfo.environment[
+        "REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"
+      ] == "1"
+    }
+  #endif
+
   init(
     discovery: any ControllerDiscovering = BonjourControllerDiscovery(),
     link: TrustedControllerLink = TrustedControllerLink(
@@ -35,6 +47,14 @@ final class ControllerLinkViewModel: ObservableObject {
 
   func start() {
     guard discoveryTask == nil else { return }
+    #if DEBUG
+      if usesE2EFixture {
+        localNetworkPermission = .allowed
+        state = .connected(Self.e2eFixtureIdentity)
+        backendReadiness = .ready
+        return
+      }
+    #endif
     discoveryTask = Task { [weak self] in
       guard let self else { return }
       #if DEBUG
@@ -99,6 +119,11 @@ final class ControllerLinkViewModel: ObservableObject {
   }
 
   func apply(_ request: ManualSimulationRequest) async -> ControllerLinkResponse {
+    #if DEBUG
+      if usesE2EFixture {
+        return .applied(requestID: request.requestID)
+      }
+    #endif
     let response = await link.apply(
       requestID: request.requestID,
       latitude: request.location.latitude,
@@ -110,6 +135,11 @@ final class ControllerLinkViewModel: ObservableObject {
   }
 
   func stop(requestID: UUID) async -> ControllerLinkResponse {
+    #if DEBUG
+      if usesE2EFixture {
+        return .stopped(requestID: requestID)
+      }
+    #endif
     let response = await link.stop(requestID: requestID)
     state = await link.currentState()
     backendReadiness = await link.currentBackendReadiness()

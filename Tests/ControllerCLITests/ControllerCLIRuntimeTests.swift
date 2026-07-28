@@ -6,6 +6,26 @@ import XCTest
 @testable import ControllerCLI
 
 final class ControllerCLIRuntimeTests: XCTestCase {
+  func testServeLifecycleNormalCompletionResetsOnceAndReportsResult() async throws {
+    let backend = ServeLifecycleRecordingBackend()
+    let controller = SimulationController(backend: backend)
+    let reports = ServeLifecycleReports()
+
+    try await ControllerCLIRuntime.runServeLifecycle(
+      seconds: 60,
+      controller: controller,
+      sleep: { _ in },
+      report: { result in await reports.append(result) }
+    )
+
+    let clearCount = await backend.clearCount
+    XCTAssertEqual(clearCount, 1)
+    let reportedResults = await reports.values
+    XCTAssertEqual(reportedResults.count, 1)
+    XCTAssertEqual(reportedResults[0].exitCode, 0)
+    XCTAssertTrue(reportedResults[0].output.hasPrefix("Reset completed for request "))
+  }
+
   func testResolvesExplicitValuesBeforeEnvironmentAndDefaults() {
     let explicit = ControllerCLIRuntime.resolveConfiguration(
       device: " Explicit Device ",
@@ -88,6 +108,32 @@ final class ControllerCLIRuntimeTests: XCTestCase {
       )
     )
     XCTAssertTrue(executor.invocations.isEmpty)
+  }
+}
+
+private actor ServeLifecycleRecordingBackend: InjectionBackend {
+  private(set) var clearCount = 0
+
+  func readiness() -> InjectionBackendReadiness {
+    .ready
+  }
+
+  func execute(_ command: InjectionBackendCommand) -> InjectionBackendResult {
+    switch command {
+    case .apply(let requestID, let location):
+      return .applied(requestID: requestID, location: location)
+    case .clear(let requestID):
+      clearCount += 1
+      return .cleared(requestID: requestID)
+    }
+  }
+}
+
+private actor ServeLifecycleReports {
+  private(set) var values: [ControllerCLIResult] = []
+
+  func append(_ result: ControllerCLIResult) {
+    values.append(result)
   }
 }
 

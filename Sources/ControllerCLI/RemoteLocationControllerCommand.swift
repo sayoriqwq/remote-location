@@ -327,13 +327,13 @@ public struct RemoteLocationControllerCommand: AsyncParsableCommand {
           print("Controller Link is ready. Pairing code: \(code) (expires in 5 minutes).")
         }
         print("Keep this command open while using the iPhone app.")
-        do {
-          try await Task.sleep(for: .seconds(seconds))
-        } catch {
-          await reportBestEffortReset(using: simulationController)
-          throw error
-        }
-        await reportBestEffortReset(using: simulationController)
+        try await ControllerCLIRuntime.runServeLifecycle(
+          seconds: seconds,
+          controller: simulationController,
+          report: { result in
+            print("Controller exit cleanup: \(result.output)")
+          }
+        )
       }
     }
   }
@@ -351,11 +351,4 @@ private func emit(_ result: ControllerCLIResult) async throws {
   guard result.exitCode == 0 else {
     throw ExitCode(result.exitCode)
   }
-}
-
-private func reportBestEffortReset(using controller: SimulationController) async {
-  let result = await ControllerCLIRunner(controller: controller).run(
-    .reset(requestID: UUID())
-  )
-  print("Controller exit cleanup: \(result.output)")
 }

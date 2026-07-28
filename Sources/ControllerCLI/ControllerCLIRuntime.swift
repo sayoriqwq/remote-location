@@ -70,6 +70,33 @@ public enum ControllerCLIRuntime {
     )
   }
 
+  static func runServeLifecycle(
+    seconds: Double,
+    controller: SimulationController,
+    sleep: @Sendable (Double) async throws -> Void = { duration in
+      try await Task.sleep(for: .seconds(duration))
+    },
+    report: @Sendable (ControllerCLIResult) async -> Void
+  ) async throws {
+    do {
+      try await sleep(seconds)
+    } catch {
+      await reportServeCleanup(using: controller, report: report)
+      throw error
+    }
+    await reportServeCleanup(using: controller, report: report)
+  }
+
+  private static func reportServeCleanup(
+    using controller: SimulationController,
+    report: @Sendable (ControllerCLIResult) async -> Void
+  ) async {
+    let result = await ControllerCLIRunner(controller: controller).run(
+      .reset(requestID: UUID())
+    )
+    await report(result)
+  }
+
   private static func nonempty(_ value: String?) -> String? {
     guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
       !trimmed.isEmpty

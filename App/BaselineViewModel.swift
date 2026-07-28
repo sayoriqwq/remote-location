@@ -28,8 +28,8 @@ final class BaselineViewModel: ObservableObject {
     _ location: SelectedLocation,
     source: LocationSelectionSource
   ) -> Bool {
-    guard !isApplying, !isStopping else {
-      inputError = "Finish the current apply or stop request before changing the Selected Location."
+    guard !isStopping else {
+      inputError = "Finish the current stop request before changing the Selected Location."
       return false
     }
 

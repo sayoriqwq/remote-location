@@ -136,6 +136,38 @@ final class ManualSimulationSessionTests: XCTestCase {
     XCTAssertEqual(session.activeAppliedRequest, firstRequest)
   }
 
+  func testSelectingReplacementKeepsAppliedRequestActiveAndStoppableUntilAcknowledged() throws {
+    var session = ManualSimulationSession()
+    try session.select(latitude: "31.2304", longitude: "121.4737")
+    let applyID = UUID()
+    let appliedRequest = try session.beginApply(requestID: applyID, at: requestTime)
+    XCTAssertTrue(session.acknowledgeApplied(requestID: applyID))
+
+    let replacement = try SelectedLocation(latitude: 52.5200, longitude: 13.4050)
+    session.select(replacement)
+
+    XCTAssertEqual(session.selected, replacement)
+    XCTAssertEqual(session.activeAppliedRequest, appliedRequest)
+    XCTAssertEqual(session.status, .applied(appliedRequest))
+
+    let stopID = UUID()
+    session.beginStop(requestID: stopID)
+    XCTAssertTrue(session.acknowledgeStopped(requestID: stopID))
+    XCTAssertNil(session.activeAppliedRequest)
+  }
+
+  func testSelectingDuringApplyPreservesTheInFlightRequest() throws {
+    var session = ManualSimulationSession()
+    try session.select(latitude: "31.2304", longitude: "121.4737")
+    let request = try session.beginApply(requestID: UUID(), at: requestTime)
+
+    let replacement = try SelectedLocation(latitude: 52.5200, longitude: 13.4050)
+    session.select(replacement)
+
+    XCTAssertEqual(session.selected, replacement)
+    XCTAssertEqual(session.status, .applying(request))
+  }
+
   func testLateAppliedAcknowledgementStillEndsAsAppliedButTimedOut() throws {
     var session = ManualSimulationSession()
     try session.select(latitude: "31.2304", longitude: "121.4737")

@@ -132,8 +132,9 @@ final class RemoteLocationLearningUITests: XCTestCase {
     applyAndVerify(coordinateB, in: app)
   }
 
-  func testMapSelectionReplacesTheSharedSelectionWithoutApplying() {
+  func testMapSelectionReachesTheFreshObservationVerificationSeam() {
     let app = XCUIApplication()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
     app.launch()
     app.tap()
 
@@ -159,15 +160,23 @@ final class RemoteLocationLearningUITests: XCTestCase {
     }
     XCTAssertTrue(selectedStatus.waitForExistence(timeout: 5))
 
-    let apply = app.buttons["apply-selected-location"]
-    scrollUp(until: apply, in: app)
-    XCTAssertTrue(apply.waitForExistence(timeout: 5))
-    XCTAssertTrue(apply.isEnabled)
+    let coordinate = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
+    scrollToTop(in: app)
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectedLatitude.label.hasSuffix("31.230400"))
+    XCTAssertTrue(selectedLongitude.label.hasSuffix("121.473700"))
+    applyAndVerifySimulation(of: coordinate, in: app)
   }
 
-  func testSearchResultUsesTheSameExplicitSelectionPath() {
+  func testSearchResultReachesTheFreshObservationVerificationSeam() {
     let app = XCUIApplication()
     app.launchEnvironment["REMOTE_LOCATION_E2E_SEARCH_FIXTURE"] = "1"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
     app.launch()
     app.tap()
 
@@ -184,9 +193,23 @@ final class RemoteLocationLearningUITests: XCTestCase {
     waitForSelectionConfirmation(in: app)
     app.buttons["close-location-picker"].tap()
 
-    XCTAssertTrue(app.staticTexts["selection-source"].label.hasSuffix("Place search"))
-    XCTAssertTrue(app.staticTexts["selected-latitude"].label.hasSuffix("35.676200"))
-    XCTAssertTrue(app.staticTexts["selected-longitude"].label.hasSuffix("139.650300"))
+    scrollToTop(in: app)
+    let selectionSource = app.staticTexts["selection-source"]
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    scrollUp(until: selectionSource, in: app)
+    XCTAssertTrue(selectionSource.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectionSource.label.hasSuffix("Place search"))
+    XCTAssertTrue(selectedLatitude.label.hasSuffix("35.676200"))
+    XCTAssertTrue(selectedLongitude.label.hasSuffix("139.650300"))
+    applyAndVerifySimulation(
+      of: CLLocationCoordinate2D(latitude: 35.6762, longitude: 139.6503),
+      in: app
+    )
   }
 
   func testSearchEmptyAndFailureStatesPreserveThePreviousSelection() {
@@ -264,6 +287,20 @@ final class RemoteLocationLearningUITests: XCTestCase {
   ) {
     selectAndBeginObservation(of: coordinate, in: app)
 
+    verifyFreshObservation(of: coordinate, in: app)
+  }
+
+  private func verifyFreshObservation(
+    of coordinate: CLLocationCoordinate2D,
+    in app: XCUIApplication
+  ) {
+    let start = app.buttons["start-observation-window"]
+    for _ in 0..<10 where !start.exists {
+      app.collectionViews.firstMatch.swipeUp()
+    }
+    XCTAssertTrue(start.waitForExistence(timeout: 5))
+    start.tap()
+
     XCUIDevice.shared.location = XCUILocation(
       location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
     )
@@ -295,6 +332,41 @@ final class RemoteLocationLearningUITests: XCTestCase {
       named:
         "Learning App verified fresh observation (\(observedTimestampLabel); \(elapsed.label); \(distance.label))"
     ) { _ in }
+  }
+
+  private func applyAndVerifySimulation(
+    of coordinate: CLLocationCoordinate2D,
+    in app: XCUIApplication
+  ) {
+    let apply = app.buttons["apply-selected-location"]
+    scrollUp(until: apply, in: app)
+    XCTAssertTrue(apply.waitForExistence(timeout: 5))
+    XCTAssertTrue(apply.isEnabled)
+    apply.tap()
+
+    let applied = app.staticTexts.matching(identifier: "simulation-status")
+      .matching(
+        NSPredicate(
+          format: "label == %@",
+          "Applied Simulation — waiting for a fresh observation"
+        )
+      )
+      .firstMatch
+    XCTAssertTrue(applied.waitForExistence(timeout: 5))
+
+    XCUIDevice.shared.location = XCUILocation(
+      location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+    )
+
+    let verified = app.staticTexts.matching(identifier: "simulation-status")
+      .matching(
+        NSPredicate(
+          format: "label == %@",
+          "Verified Simulation in this Learning App"
+        )
+      )
+      .firstMatch
+    XCTAssertTrue(verified.waitForExistence(timeout: 15))
   }
 
   private func clearAndVerifyProxyInactive(in app: XCUIApplication) {
@@ -338,12 +410,6 @@ final class RemoteLocationLearningUITests: XCTestCase {
     app.buttons["Return"].tap()
     app.buttons["save-selection"].tap()
 
-    let start = app.buttons["start-observation-window"]
-    for _ in 0..<10 where !start.exists {
-      app.collectionViews.firstMatch.swipeUp()
-    }
-    XCTAssertTrue(start.waitForExistence(timeout: 5))
-    start.tap()
   }
 
   private func waitForObservedCoordinate(
