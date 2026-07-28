@@ -6,6 +6,8 @@
 
 `Lead 统一编排 → 有界实现 → Lead 集成 → 阶段末双轴审查 → 独立 Modifier 修复 → Lead 验证与验收`
 
+当前 backend 修订：ADR-0009 在 Stage A 探针之后将生产 Injection Backend 替换为 Xcode 27 的公开 `devicectl` location-simulation 命令。Stage A 的 XCUITest 记录保留为历史可行性证据；从 #5 的生产接线开始，协议中的 runner/session 描述按 `devicectl` 单后端执行，不保留第二条生产路径。
+
 用户只与 Lead 对接。所有子 Agent、Session Worker、Reviewer 和 Modifier 都只向 Lead 返回；它们不能联系用户、互相派发、创建后代或改变 ticket/stage 状态。
 
 父需求是 [GitHub Issue #1](https://github.com/sayoriqwq/remote-location/issues/1)。执行 tickets 是 [#2](https://github.com/sayoriqwq/remote-location/issues/2) 到 [#10](https://github.com/sayoriqwq/remote-location/issues/10)。Lead 不得自动修改或关闭父 Issue #1。
@@ -106,7 +108,7 @@ flowchart LR
 | #2 | Terra medium direct Worker 或 Lead | 首次工程建立、签名、Core Location 与真机 GPX 需要较强判断 |
 | #3 | Lead 或 Terra medium direct Worker | 物理设备硬 gate、公开 API 边界和 10 分钟证据不能交给低能力模型 |
 | #4 | Terra medium direct Worker 或 Lead | TLS、六位码、Keychain 和认证拒绝路径属于安全边界 |
-| #5 | Terra medium direct Worker 或 Lead | Xcode session、runner control channel 与 backend neutrality 风险高 |
+| #5 | Terra medium direct Worker 或 Lead | `devicectl` 参数边界、进程环境隔离与 backend neutrality 风险高 |
 | #6 | Lead 或 Terra medium direct Worker | 跨 App/CLI/Link/backend 的核心领域状态与 request identity 收敛点 |
 | #7 | Luna low Session pilot；失败则 Spark medium | UI 选择入口边界清楚、可通过既有 seam 自动验证 |
 | #8 | Spark medium Session；出现权限/隐私歧义时提升 Terra/Lead | doctor/tutorial/status 主要是可控 fixture 与输出行为 |
@@ -123,8 +125,8 @@ flowchart LR
 
 | Stage | Tickets | 完成条件 | 阶段末审查重点 |
 | --- | --- | --- | --- |
-| A：真机可行性 | #2 → #3 | GPX baseline 成立，公开 XCUITest 完整通过 A/B/clear、重复操作和 10 分钟 gate | 公开 API、证据真实性、Selected/Applied/Observed/Verified 状态边界 |
-| B：控制基础 | #4 与 #5 | Trusted Controller Link 和 Mac CLI/Injection Backend 两条分支分别可验证 | TLS/Keychain、认证、session credential、backend neutrality、错误边界 |
+| A：真机可行性 | #2 → #3 | GPX baseline 成立，公开 XCUITest 完整通过 A/B fresh observation、public proxy clear、重复操作和 10 分钟 gate | 公开 API、证据真实性、Selected/Applied/Observed/Verified/Stopped 状态边界 |
+| B：控制基础 | #4 与 #5 | Trusted Controller Link 和 Mac CLI/Injection Backend 两条分支分别可验证 | TLS/Keychain、认证、`devicectl` 参数与环境隔离、backend neutrality、错误边界 |
 | C：核心能力 | #6 | 手工坐标完整走通 Selected → Applied → Observed → Verified | request identity、15 秒/25 米规则、Applied-but-not-verified、Cross-App 声明 |
 | D：完整体验 | #7、#8、#9 | 地图/搜索、诊断/教程、替换/停止/恢复全部集成 | UI 状态汇流、只读 doctor、权限、清理、断线和隐私 |
 | E：整体验收 | #10 | 当前个人环境完整 journey、自动化检查和边界审计通过 | 全量 Spec、公开 API/依赖/隐私、真机证据、未验证范围 |
@@ -137,14 +139,15 @@ flowchart LR
 2. Lead 将 #2 核对为 integrated 后才开始 #3；#2 要到 Stage A 审查通过后才成为 accepted。
 3. #3 必须在同一 session 完成 A set、B replace、nil clear、多轮重复和至少 10 分钟稳定性。
 4. Setter 无错误返回不是通过；每次 set/replace 都需要 Learning App 的 fresh observation 证据。
-5. #3 失败时：保留脱敏证据、保持 #3 open、所有下游保持 blocked，并向用户请求新的 backend 决策。不得进入 Stage B。
+5. Clear 只有在公开 `XCUIDevice.shared.location` getter 读回 `nil` 时通过。Learning App 必须把仍显示的坐标明确描述为最后一次 observation，而不是活动模拟或已恢复的物理位置；新的物理 Core Location callback 只记为 best-effort 诊断，不设 gate 时限。
+6. #3 的 A/B fresh observation、nil getter、重复操作、600 秒稳定性或公开 API 审计失败时：保留脱敏证据、保持 #3 open、所有下游保持 blocked，并向用户请求新的 backend 决策。不得进入 Stage B。
 
 ## Stage B：控制基础
 
 #4 和 #5 在依赖图上可并行，但并不自动代表写入安全：
 
 - #4 所有权集中在 Controller Link、pairing/TLS/Keychain、连接 UI 与 transport harness。
-- #5 所有权集中在 Simulation Controller CLI、Injection Backend contract、XCUITest runner/control channel 与 CLI tests。
+- #5 所有权集中在 Simulation Controller CLI、Injection Backend contract、`devicectl` 子进程边界与 CLI tests。
 - 工程/Package manifests、共享领域类型、协议注册表和项目配置默认由 Lead 持有或串行修改。
 - 如果当前结构无法形成不重叠所有权，Lead 必须串行执行，不得让 Workers 自行合并冲突。
 
@@ -171,6 +174,7 @@ Stage C 未 accepted 前，不派发 #7、#8 或 #9。
 2. #8 可交给 Spark medium Session；若它需要改变共享错误模型、权限边界或隐私策略，停止并提升给 Terra/Lead。
 3. #9 默认由 Lead/Terra 串行处理，因为它会触及 App、Controller、Link 与 backend 生命周期。
 4. 只有实际文件所有权不重叠时才并行 #7 与 #8；#9 与任何共享状态修改默认串行。
+5. #8 的 doctor 只能执行固定 allowlist 内的只读命令；原始设备/签名输出不进入报告。iPhone 的 Location 与 Local Network 权限由 App 分别展示，Mac doctor 只给出 App 内检查指引。
 
 Stage D 审查后，所有高严重级生命周期、权限、TLS、隐私或状态机 finding 都必须关闭，才能进入 Stage E。
 
@@ -248,13 +252,13 @@ Lead 应合并相邻人工步骤，避免频繁往返，但不能把未执行的
 | 层级 | 最小验证 |
 | --- | --- |
 | Ticket | 先建立相关失败测试，再做最小实现；运行单元/集成/UI/CLI 中与该票直接相关的检查 |
-| Stage A | 真机构建、GPX baseline、XCUITest A/B/clear、多轮重复、10 分钟稳定性、公开 API 审计 |
+| Stage A | 真机构建、GPX baseline、XCUITest A/B fresh observation、nil getter clear、last-observation UI 语义、多轮重复、10 分钟稳定性、公开 API 审计 |
 | Stage B | pairing/TLS/Keychain transport harness、backend contract、CLI 行为和物理 apply/stop smoke |
 | Stage C | request identity、领域状态、15 秒/25 米 observation 序列、手工坐标真机 E2E |
 | Stage D | 地图/搜索 UI journey、doctor fixtures、权限/隐私、A→B→stop/reset 生命周期 |
 | Stage E | 全量相关自动化检查、公开 API/许可证/隐私审计、完整真机 journey 和最终双轴审查 |
 
-测试断言外部可观察行为，不锁定内部类型名、进程拓扑、Network.framework callback 顺序或 runner framing。
+测试断言外部可观察行为，不锁定内部类型名、进程拓扑、Network.framework callback 顺序或 `devicectl` 子进程实现细节。
 
 ## 阶段审查与 finding ledger
 
@@ -265,7 +269,7 @@ Lead 应合并相邻人工步骤，避免频繁往返，但不能把未执行的
 
 每条 finding 必须包含稳定 ID、严重级别、轴、证据位置、风险和可验证修复条件。Lead 对 findings 逐条记录 `accepted`、`rejected-with-reason` 或 `needs-user-decision`。
 
-只有 accepted findings 交给新的 `stage_modifier`。Modifier 逐 ID 返回 `fixed`、`not-fixed` 或 `needs-decision`，不能自行关闭 finding。Lead 检查实际 diff并运行定向验证；涉及 TLS、权限、session credential、公开 API、Verified 规则或清理语义的修复必须定向复审。
+只有 accepted findings 交给新的 `stage_modifier`。Modifier 逐 ID 返回 `fixed`、`not-fixed` 或 `needs-decision`，不能自行关闭 finding。Lead 检查实际 diff并运行定向验证；涉及 TLS、权限、设备 selector、子进程环境隔离、公开 API、Verified 规则或清理语义的修复必须定向复审。
 
 ## Lead ledger
 
@@ -367,7 +371,7 @@ Lead 至少维护以下字段：
 
 ## 失败与降级
 
-- #3 gate 失败：停止整个下游，保存证据，请求用户做新的 backend 决策。
+- #3 gate 的 A/B fresh observation、nil getter、重复操作、600 秒稳定性或公开 API 审计失败：停止整个下游，保存证据，请求用户做新的 backend 决策。clear 后没有新的物理 callback 本身不构成 gate 失败。
 - 快速模型 pilot 越界或无法满足验收：取消该路由资格，提升到 Spark/Terra/Lead；不重复碰运气。
 - 必需的精确 role/model route 不可用：标记 unavailable 并向用户报告；不静默替换。
 - 真机、签名、Developer Mode、DDI 或 Xcode 阻塞：只读诊断后由 Lead 请求具体人工动作。
@@ -382,7 +386,7 @@ Lead 至少维护以下字段：
 本协议完成不是“所有 Agent 都返回 done”，而是：
 
 - #2–#10 的 blocker、实现、diff、自动化验证和人工证据均由 Lead 核对；
-- #3 公开 XCUITest gate 保持通过；
+- #3 公开 XCUITest gate 按 ADR-0008 的 clear 语义保持通过；
 - 每阶段 Standards/Spec findings 均已处置并验证；
 - 当前个人环境的完整真机 journey 通过；
 - 没有 private API、未批准 backend、云、遥测、历史或 Cross-App guarantee；
