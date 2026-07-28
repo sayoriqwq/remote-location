@@ -1,0 +1,61 @@
+function rl_prepare_environment
+    set --local repo_root (path resolve (path dirname (status filename))/..)
+    cd $repo_root
+    or return 1
+
+    if not set --query REMOTE_LOCATION_DEVELOPER_DIR
+        set --global --export REMOTE_LOCATION_DEVELOPER_DIR /Applications/Xcode-beta.app/Contents/Developer
+    end
+    set --global --export DEVELOPER_DIR $REMOTE_LOCATION_DEVELOPER_DIR
+
+    if not test -d $DEVELOPER_DIR
+        echo "Xcode developer directory does not exist: $DEVELOPER_DIR" >&2
+        echo "Install Xcode Beta or override REMOTE_LOCATION_DEVELOPER_DIR in .env.local." >&2
+        return 1
+    end
+
+    if set --query REMOTE_LOCATION_DEVICE; and test -n "$REMOTE_LOCATION_DEVICE"
+        return 0
+    end
+
+    if not command --query jq
+        echo "jq is unavailable. Enter the repository through direnv, then retry." >&2
+        return 1
+    end
+
+    set --local device_json (mktemp -t remote-location-devices.XXXXXX)
+    or return 1
+
+    xcrun devicectl list devices --quiet --json-output $device_json >/dev/null 2>&1
+    set --local devicectl_status $status
+    if test $devicectl_status -ne 0
+        command rm -f -- $device_json
+        echo "Unable to inspect paired devices. Connect and unlock the iPhone, then retry." >&2
+        return $devicectl_status
+    end
+
+    set --local device_ids (jq --raw-output '
+        .result.devices
+        | map(select(
+            .properties.hardware.reality == "physical"
+            and .properties.hardware.platform == "iOS"
+            and .properties.connection.pairingState == "paired"
+        ))
+        | .[].identifier
+    ' $device_json)
+    command rm -f -- $device_json
+
+    if test (count $device_ids) -eq 1
+        set --global --export REMOTE_LOCATION_DEVICE $device_ids[1]
+        echo "Using the only paired physical iPhone." >&2
+        return 0
+    end
+
+    if test (count $device_ids) -eq 0
+        echo "No paired physical iPhone was found. Connect and unlock it, then retry." >&2
+    else
+        echo "Multiple paired physical iPhones were found." >&2
+    end
+    echo "Copy .env.example to .env.local and set REMOTE_LOCATION_DEVICE privately." >&2
+    return 1
+end

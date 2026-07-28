@@ -4,6 +4,8 @@ DerivedData/
 xcuserdata/
 .DS_Store
 .swiftpm/
+.direnv/
+.env.local
 
 # Signing identity is local to the developer and must never enter the repository.
 Config/Signing.local.xcconfig

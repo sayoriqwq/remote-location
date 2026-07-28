@@ -1,0 +1,41 @@
+#!/usr/bin/env fish
+
+set --local script_dir (path resolve (path dirname (status filename)))
+source $script_dir/_rl-common.fish
+or exit 1
+
+# Keep the wrapper alive when the foreground controller receives Control-C so
+# the abnormal-exit reset below can run.
+function rl_keep_wrapper_for_cleanup --on-signal INT
+end
+
+argparse 'h/help' 's/seconds=' -- $argv
+or exit 2
+
+if set --query _flag_help
+    echo "Usage: rl-start [--seconds 60...86400]"
+    echo "Starts the trusted Controller Link and keeps it open. Stop with Ctrl+C."
+    exit 0
+end
+
+rl_prepare_environment
+or exit $status
+
+set --local seconds 3600
+if set --query REMOTE_LOCATION_SECONDS
+    set seconds $REMOTE_LOCATION_SECONDS
+end
+if set --query _flag_seconds
+    set seconds $_flag_seconds
+end
+
+swift run remote-location-controller link serve --seconds $seconds
+set --local serve_status $status
+
+# Normal expiry already performs cleanup inside the controller. A signal or other
+# abnormal exit may bypass that lifecycle, so make the reset explicit and idempotent.
+if test $serve_status -ne 0
+    swift run remote-location-controller reset
+end
+
+exit $serve_status

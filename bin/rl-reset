@@ -1,0 +1,10 @@
+#!/usr/bin/env fish
+
+set --local script_dir (path resolve (path dirname (status filename)))
+source $script_dir/_rl-common.fish
+or exit 1
+
+rl_prepare_environment
+or exit $status
+
+exec swift run remote-location-controller reset

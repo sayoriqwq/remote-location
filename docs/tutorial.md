@@ -2,6 +2,27 @@
 
 This tutorial covers the current personal environment only. The production Injection Backend is Xcode 27's public `devicectl device simulate location` workflow; there is no production test runner or second backend.
 
+## Repository-local quick start
+
+The repository contains a Nix Flake and direnv setup. It supplies Fish, jq, and XcodeGen while deliberately leaving Swift to the approved Xcode Beta toolchain. Approve the environment once after cloning or whenever `.envrc` changes:
+
+```console
+cd /Users/sayori/Desktop/remote-location
+direnv allow
+```
+
+After that, the normal startup flow is:
+
+```console
+cd /Users/sayori/Desktop/remote-location
+rl-doctor
+rl-start
+```
+
+`rl-start` keeps the trusted Controller Link open for one hour by default. Use `rl-start --seconds 86400` for a longer session and stop it with Control-C; the wrapper then performs an idempotent cleanup reset. `rl-reset` clears an active simulation without starting the link.
+
+When exactly one paired physical iPhone is known to Xcode, these commands select it automatically without printing its private identifier. If discovery is ambiguous, copy `.env.example` to the Git-ignored `.env.local` and set `REMOTE_LOCATION_DEVICE` there.
+
 ## Prepare Xcode and the iPhone
 
 1. Install the approved full Xcode and open it once to finish first-launch setup.
