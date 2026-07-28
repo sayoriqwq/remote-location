@@ -107,3 +107,10 @@ No model route was silently substituted. Issue #3 remains Lead-owned because the
 ## Current Lead decision
 
 Issues #2 and #3 remain `integrated`. The revised 600-second physical gate passed, and `A-PHYS-001` is not a blocker under the user-approved ADR-0008 contract. Stage A is `changes-required` for the four adjudicated review IDs above; Issues #4–#10 remain blocked until their remediations and Lead verification accept Stage A. Setter success still does not verify A/B, and no exploit or alternate backend is introduced.
+
+## Post-review Lead disposition
+
+- `A-STD-001` and `A-SPEC-001` were remediated by moving the real signing value to ignored `Config/Signing.local.xcconfig`, committing only the include shim, regenerating the Xcode project, and verifying that no team identifier or private signing material is tracked.
+- `A-STD-002` was remediated by narrowing the research wording to the tested-and-rejected automatic-pausing hypothesis rather than presenting it as a runtime requirement.
+- `A-SPEC-002` retains one evidence limitation: the exact values displayed during the original GPX baseline were not reconstructed. The signed physical GPX match and post-stop recovery were directly observed, and the later public-device gate supplied stronger fresh-observation evidence with 20 matches at 0.00 meters over 618.1 seconds. On the user's instruction to stop treating non-product evidence repetition as a downstream blocker, the Lead accepts this limitation without inventing the missing original readout.
+- Final Lead status: Stage A `accepted`; Issues #2 and #3 may close. The public XCUITest gate and the explicit last-observation semantics remain required regressions for #10.
