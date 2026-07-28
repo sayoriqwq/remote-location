@@ -1,0 +1,61 @@
+name: RemoteLocation
+
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "27.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+
+fileGroups:
+  - Fixtures
+
+targets:
+  RemoteLocationLearning:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    sources:
+      - path: App
+      - path: Sources/ControllerLink
+      - path: Sources/LocationDomain
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        CODE_SIGN_STYLE: Automatic
+        CURRENT_PROJECT_VERSION: 1
+        GENERATE_INFOPLIST_FILE: false
+        INFOPLIST_FILE: Config/RemoteLocationLearning-Info.plist
+        MARKETING_VERSION: 1.0
+        PRODUCT_BUNDLE_IDENTIFIER: dev.sayori.remotelocation.learning
+        SUPPORTS_MACCATALYST: false
+        TARGETED_DEVICE_FAMILY: 1
+    scheme:
+      gatherCoverageData: false
+      testTargets:
+        - RemoteLocationLearningUITests
+
+  RemoteLocationLearningUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    sources:
+      - path: Tests/RemoteLocationLearningUITests
+    dependencies:
+      - target: RemoteLocationLearning
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: >-
+          UI tests use local-network access only when explicitly exercising Controller Link behavior.
+        PRODUCT_BUNDLE_IDENTIFIER: dev.sayori.remotelocation.learning-uitests
+        SUPPORTS_MACCATALYST: false
+        TARGETED_DEVICE_FAMILY: 1

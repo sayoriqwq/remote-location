@@ -1,0 +1,156 @@
+import XCTest
+
+@MainActor
+final class RemoteLocationControllerLinkUITests: XCTestCase {
+  override func setUp() {
+    super.setUp()
+    continueAfterFailure = false
+    addUIInterruptionMonitor(withDescription: "Required app permissions") { alert in
+      MainActor.assumeIsolated {
+        for title in [
+          "Allow", "OK", "Allow While Using App",
+          "允许", "好", "使用 App 时允许", "使用 App 期间允许",
+        ] {
+          let button = alert.buttons[title]
+          if button.exists {
+            button.tap()
+            return true
+          }
+        }
+        return false
+      }
+    }
+  }
+
+  func testDiscoversPairsAndPinsTheMacController() throws {
+    guard let pairingCode = ProcessInfo.processInfo.environment["REMOTE_LOCATION_PAIRING_CODE"]
+    else {
+      throw XCTSkip("A short-lived Mac pairing code is required for this smoke test.")
+    }
+
+    let app = XCUIApplication()
+    app.launch()
+    app.tap()
+
+    let connected = connectedStatus(in: app)
+    if connected.waitForExistence(timeout: 8) {
+      return
+    }
+
+    let pairingField = app.textFields["controller-pairing-code"]
+    XCTAssertTrue(pairingField.waitForExistence(timeout: 20))
+    pairingField.tap()
+    pairingField.typeText(pairingCode)
+    app.buttons["pair-controller"].tap()
+
+    XCTAssertTrue(connected.waitForExistence(timeout: 20))
+  }
+
+  func testPhysicalMapSearchApplyReplaceVerifyAndStop() throws {
+    if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
+      throw XCTSkip("This end-to-end controller journey runs only on the physical iPhone.")
+    }
+    guard let pairingCode = ProcessInfo.processInfo.environment["REMOTE_LOCATION_PAIRING_CODE"]
+    else {
+      throw XCTSkip("A short-lived Mac pairing code is required for this smoke test.")
+    }
+
+    let app = XCUIApplication()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_SEARCH_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+    try ensureConnected(app, pairingCode: pairingCode)
+
+    openLocationPicker(in: app)
+    XCTAssertTrue(app.otherElements["location-map"].waitForExistence(timeout: 10))
+    app.buttons["use-map-center"].tap()
+    XCTAssertTrue(
+      app.staticTexts["location-selection-confirmation"].waitForExistence(timeout: 5)
+    )
+    app.buttons["close-location-picker"].tap()
+    applyAndWaitForVerification(in: app)
+
+    openLocationPicker(in: app)
+    let search = app.textFields["place-search-input"]
+    XCTAssertTrue(search.waitForExistence(timeout: 10))
+    search.tap()
+    search.typeText("fixture")
+    app.buttons["search-places"].tap()
+    let result = app.buttons["place-search-result"]
+    XCTAssertTrue(result.waitForExistence(timeout: 10))
+    result.tap()
+    XCTAssertTrue(
+      app.staticTexts["location-selection-confirmation"].waitForExistence(timeout: 5)
+    )
+    app.buttons["close-location-picker"].tap()
+    applyAndWaitForVerification(in: app)
+
+    let stop = app.buttons["stop-simulation"]
+    scroll(upTo: stop, in: app)
+    XCTAssertTrue(stop.waitForExistence(timeout: 5))
+    XCTAssertTrue(waitUntilEnabled(stop, timeout: 10))
+    stop.tap()
+    let cleared = app.staticTexts.matching(identifier: "stop-status")
+      .matching(NSPredicate(format: "label == %@", "Injection Backend cleared"))
+      .firstMatch
+    XCTAssertTrue(cleared.waitForExistence(timeout: 20))
+  }
+
+  private func ensureConnected(_ app: XCUIApplication, pairingCode: String) throws {
+    let connected = connectedStatus(in: app)
+    if connected.waitForExistence(timeout: 8) {
+      return
+    }
+    let pairingField = app.textFields["controller-pairing-code"]
+    XCTAssertTrue(pairingField.waitForExistence(timeout: 20))
+    pairingField.tap()
+    pairingField.typeText(pairingCode)
+    app.buttons["pair-controller"].tap()
+    XCTAssertTrue(connected.waitForExistence(timeout: 20))
+  }
+
+  private func connectedStatus(in app: XCUIApplication) -> XCUIElement {
+    app.staticTexts.matching(identifier: "controller-link-status")
+      .matching(NSPredicate(format: "label == %@", "Trusted controller connected"))
+      .firstMatch
+  }
+
+  private func openLocationPicker(in app: XCUIApplication) {
+    let button = app.buttons["open-location-picker"]
+    for _ in 0..<10 where !button.exists {
+      app.collectionViews.firstMatch.swipeDown()
+    }
+    XCTAssertTrue(button.waitForExistence(timeout: 5))
+    button.tap()
+  }
+
+  private func applyAndWaitForVerification(in app: XCUIApplication) {
+    let apply = app.buttons["apply-selected-location"]
+    scroll(upTo: apply, in: app)
+    XCTAssertTrue(apply.waitForExistence(timeout: 5))
+    XCTAssertTrue(waitUntilEnabled(apply, timeout: 15))
+    apply.tap()
+
+    let verified = app.staticTexts.matching(identifier: "simulation-status")
+      .matching(
+        NSPredicate(format: "label == %@", "Verified Simulation in this Learning App")
+      )
+      .firstMatch
+    scroll(upTo: verified, in: app)
+    XCTAssertTrue(verified.waitForExistence(timeout: 25))
+  }
+
+  private func scroll(upTo element: XCUIElement, in app: XCUIApplication) {
+    for _ in 0..<10 where !element.exists {
+      app.collectionViews.firstMatch.swipeUp()
+    }
+  }
+
+  private func waitUntilEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "enabled == true"),
+      object: element
+    )
+    return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+  }
+}

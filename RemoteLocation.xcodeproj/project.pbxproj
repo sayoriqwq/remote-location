@@ -1,0 +1,544 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0141CFE02E6DCC49FE26DC35 /* BaselineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2946B4BB60FF2EB9EE86F9C0 /* BaselineViewModel.swift */; };
+		0424120E78793B82A9C0EEFC /* TLSControllerServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF94DD13B7AE6AC2A17959A0 /* TLSControllerServer.swift */; };
+		0A31B5075461853BDC513685 /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */; };
+		169123AF82F73EDCE1764F36 /* ControllerCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFACA599FE341A79901ABFD2 /* ControllerCommand.swift */; };
+		170FE9E57A66954667B8B70A /* TrustedControllerLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A510E5270754E988E724FF /* TrustedControllerLink.swift */; };
+		262CE139F8FBA0FC7C5C6ED0 /* ControllerIdentitySecurity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43265D14CD58BCCB317F4B97 /* ControllerIdentitySecurity.swift */; };
+		2B6B0502B961863B9D984F7A /* RemoteLocationLearningUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197FED159197087E056EF221 /* RemoteLocationLearningUITests.swift */; };
+		32171308A1EFA700324D9D27 /* ControllerServerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A85DD686C84AD18BD24E5A3 /* ControllerServerSession.swift */; };
+		4A3179EDCDE3AD836C6B78D6 /* RemoteLocationLearningApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */; };
+		5B628C6FFED5ED7D9D02C2DD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */; };
+		5DC62CDA96B694F6627A452C /* Pairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E9B5F7C500D71F989B5E56 /* Pairing.swift */; };
+		7B9E245DAE2A540E53D4AB82 /* ManualSimulationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */; };
+		91DF5D1DB1E4E7402B47AD52 /* ControllerLinkState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC4365BC86EB9D3D4AB863 /* ControllerLinkState.swift */; };
+		A486C38F99D371F613F6AF96 /* ControllerAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5C50FBB1259E83FEE3E985 /* ControllerAuthorization.swift */; };
+		AAB946F25198A1BE77307C2F /* LocationObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A563353D69C294888044F5 /* LocationObserver.swift */; };
+		ACA268E1A51E73A40C7FB9B4 /* RemoteLocationControllerLinkUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298C583811F0BAF517BA99C4 /* RemoteLocationControllerLinkUITests.swift */; };
+		AFDABC47C65E35DB76440064 /* BonjourControllerDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D01ADB65B3135833CB6B1EC /* BonjourControllerDiscovery.swift */; };
+		B5DA7DFDC30CE2A3FC82AE08 /* LocationSelectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70085091723FA515C299CE6 /* LocationSelectionState.swift */; };
+		CA7940E553250C41E4C9DD7E /* LocationDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */; };
+		D52611A0DC8B95B20174F71F /* ControllerTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD5DF52927D1D5FE89694F1 /* ControllerTrust.swift */; };
+		DBA9472FBD63FC421A22C6F3 /* NetworkControllerLinkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 243B501AE445B272F30524A7 /* NetworkControllerLinkTransport.swift */; };
+		E2634B64C10D7ACEE42B38D6 /* LocationPickerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */; };
+		EB556E72E0BB86546C611EFB /* ControllerLinkViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E50B6607BE4007DEDA56C21D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7C484CABA92041C9C4428A43 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4F76A436D1D407E2828FEA49;
+			remoteInfo = RemoteLocationLearning;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0E5C50FBB1259E83FEE3E985 /* ControllerAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerAuthorization.swift; sourceTree = "<group>"; };
+		197FED159197087E056EF221 /* RemoteLocationLearningUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteLocationLearningUITests.swift; sourceTree = "<group>"; };
+		243B501AE445B272F30524A7 /* NetworkControllerLinkTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkControllerLinkTransport.swift; sourceTree = "<group>"; };
+		2946B4BB60FF2EB9EE86F9C0 /* BaselineViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaselineViewModel.swift; sourceTree = "<group>"; };
+		298C583811F0BAF517BA99C4 /* RemoteLocationControllerLinkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteLocationControllerLinkUITests.swift; sourceTree = "<group>"; };
+		2FBC4365BC86EB9D3D4AB863 /* ControllerLinkState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerLinkState.swift; sourceTree = "<group>"; };
+		3F8D44EB528DB6F25B107FF7 /* ShanghaiBaseline.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = ShanghaiBaseline.gpx; sourceTree = "<group>"; };
+		43265D14CD58BCCB317F4B97 /* ControllerIdentitySecurity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerIdentitySecurity.swift; sourceTree = "<group>"; };
+		492552E0E66D6D7BD046B2EF /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		4A85DD686C84AD18BD24E5A3 /* ControllerServerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerServerSession.swift; sourceTree = "<group>"; };
+		57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualSimulationSession.swift; sourceTree = "<group>"; };
+		588F6D628E098CA7C9DBB436 /* RemoteLocationLearningUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RemoteLocationLearningUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5D01ADB65B3135833CB6B1EC /* BonjourControllerDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourControllerDiscovery.swift; sourceTree = "<group>"; };
+		684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerView.swift; sourceTree = "<group>"; };
+		6FD5DF52927D1D5FE89694F1 /* ControllerTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerTrust.swift; sourceTree = "<group>"; };
+		81A563353D69C294888044F5 /* LocationObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationObserver.swift; sourceTree = "<group>"; };
+		85E9B5F7C500D71F989B5E56 /* Pairing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pairing.swift; sourceTree = "<group>"; };
+		95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationDomain.swift; sourceTree = "<group>"; };
+		9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerViewModel.swift; sourceTree = "<group>"; };
+		C05D2783175B6663C53E3079 /* RemoteLocationLearning.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RemoteLocationLearning.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1A510E5270754E988E724FF /* TrustedControllerLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustedControllerLink.swift; sourceTree = "<group>"; };
+		C70085091723FA515C299CE6 /* LocationSelectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSelectionState.swift; sourceTree = "<group>"; };
+		CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerLinkViewModel.swift; sourceTree = "<group>"; };
+		EFACA599FE341A79901ABFD2 /* ControllerCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerCommand.swift; sourceTree = "<group>"; };
+		F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteLocationLearningApp.swift; sourceTree = "<group>"; };
+		FF94DD13B7AE6AC2A17959A0 /* TLSControllerServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TLSControllerServer.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2008BB820255447732712279 /* RemoteLocationLearningUITests */ = {
+			isa = PBXGroup;
+			children = (
+				298C583811F0BAF517BA99C4 /* RemoteLocationControllerLinkUITests.swift */,
+				197FED159197087E056EF221 /* RemoteLocationLearningUITests.swift */,
+			);
+			path = RemoteLocationLearningUITests;
+			sourceTree = "<group>";
+		};
+		2053433383E3F2F46A18A872 /* ControllerLink */ = {
+			isa = PBXGroup;
+			children = (
+				5D01ADB65B3135833CB6B1EC /* BonjourControllerDiscovery.swift */,
+				0E5C50FBB1259E83FEE3E985 /* ControllerAuthorization.swift */,
+				EFACA599FE341A79901ABFD2 /* ControllerCommand.swift */,
+				43265D14CD58BCCB317F4B97 /* ControllerIdentitySecurity.swift */,
+				2FBC4365BC86EB9D3D4AB863 /* ControllerLinkState.swift */,
+				4A85DD686C84AD18BD24E5A3 /* ControllerServerSession.swift */,
+				6FD5DF52927D1D5FE89694F1 /* ControllerTrust.swift */,
+				243B501AE445B272F30524A7 /* NetworkControllerLinkTransport.swift */,
+				85E9B5F7C500D71F989B5E56 /* Pairing.swift */,
+				FF94DD13B7AE6AC2A17959A0 /* TLSControllerServer.swift */,
+				C1A510E5270754E988E724FF /* TrustedControllerLink.swift */,
+			);
+			path = ControllerLink;
+			sourceTree = "<group>";
+		};
+		4B65FBB2418DBA93C962C185 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				2053433383E3F2F46A18A872 /* ControllerLink */,
+				C7978236EBDC6073EA77FD0A /* LocationDomain */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		51576263AF36F7191FA90789 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				492552E0E66D6D7BD046B2EF /* Signing.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		75C327FA39CCC6925691B959 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				3F8D44EB528DB6F25B107FF7 /* ShanghaiBaseline.gpx */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		8AD324DCCC3B11349898A06D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				2946B4BB60FF2EB9EE86F9C0 /* BaselineViewModel.swift */,
+				CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */,
+				DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */,
+				81A563353D69C294888044F5 /* LocationObserver.swift */,
+				684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */,
+				9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */,
+				F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9D36A6F8EC402D09BFC0EC84 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				2008BB820255447732712279 /* RemoteLocationLearningUITests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		AB0D9B068CA8919C7795A0E8 = {
+			isa = PBXGroup;
+			children = (
+				8AD324DCCC3B11349898A06D /* App */,
+				51576263AF36F7191FA90789 /* Config */,
+				75C327FA39CCC6925691B959 /* Fixtures */,
+				4B65FBB2418DBA93C962C185 /* Sources */,
+				9D36A6F8EC402D09BFC0EC84 /* Tests */,
+				C93EE8C4A52554FF74F12E1E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C7978236EBDC6073EA77FD0A /* LocationDomain */ = {
+			isa = PBXGroup;
+			children = (
+				95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */,
+				C70085091723FA515C299CE6 /* LocationSelectionState.swift */,
+				57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */,
+			);
+			path = LocationDomain;
+			sourceTree = "<group>";
+		};
+		C93EE8C4A52554FF74F12E1E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C05D2783175B6663C53E3079 /* RemoteLocationLearning.app */,
+				588F6D628E098CA7C9DBB436 /* RemoteLocationLearningUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		36CE415BF8C46C398B672919 /* RemoteLocationLearningUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9213DE526D15930462C9F669 /* Build configuration list for PBXNativeTarget "RemoteLocationLearningUITests" */;
+			buildPhases = (
+				AB5F5BECC0F0C4B4B22CD826 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B2F4AB19EA69A68ED65B4B46 /* PBXTargetDependency */,
+			);
+			name = RemoteLocationLearningUITests;
+			packageProductDependencies = (
+			);
+			productName = RemoteLocationLearningUITests;
+			productReference = 588F6D628E098CA7C9DBB436 /* RemoteLocationLearningUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		4F76A436D1D407E2828FEA49 /* RemoteLocationLearning */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 504176E5EA48A29FAE595603 /* Build configuration list for PBXNativeTarget "RemoteLocationLearning" */;
+			buildPhases = (
+				E4EAF5BA6468A410165E8F7F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RemoteLocationLearning;
+			packageProductDependencies = (
+			);
+			productName = RemoteLocationLearning;
+			productReference = C05D2783175B6663C53E3079 /* RemoteLocationLearning.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7C484CABA92041C9C4428A43 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					36CE415BF8C46C398B672919 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = 4F76A436D1D407E2828FEA49;
+					};
+					4F76A436D1D407E2828FEA49 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2F427840287D89CA6A269C41 /* Build configuration list for PBXProject "RemoteLocation" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = AB0D9B068CA8919C7795A0E8;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4F76A436D1D407E2828FEA49 /* RemoteLocationLearning */,
+				36CE415BF8C46C398B672919 /* RemoteLocationLearningUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AB5F5BECC0F0C4B4B22CD826 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACA268E1A51E73A40C7FB9B4 /* RemoteLocationControllerLinkUITests.swift in Sources */,
+				2B6B0502B961863B9D984F7A /* RemoteLocationLearningUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E4EAF5BA6468A410165E8F7F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0141CFE02E6DCC49FE26DC35 /* BaselineViewModel.swift in Sources */,
+				AFDABC47C65E35DB76440064 /* BonjourControllerDiscovery.swift in Sources */,
+				5B628C6FFED5ED7D9D02C2DD /* ContentView.swift in Sources */,
+				A486C38F99D371F613F6AF96 /* ControllerAuthorization.swift in Sources */,
+				169123AF82F73EDCE1764F36 /* ControllerCommand.swift in Sources */,
+				262CE139F8FBA0FC7C5C6ED0 /* ControllerIdentitySecurity.swift in Sources */,
+				91DF5D1DB1E4E7402B47AD52 /* ControllerLinkState.swift in Sources */,
+				EB556E72E0BB86546C611EFB /* ControllerLinkViewModel.swift in Sources */,
+				32171308A1EFA700324D9D27 /* ControllerServerSession.swift in Sources */,
+				D52611A0DC8B95B20174F71F /* ControllerTrust.swift in Sources */,
+				CA7940E553250C41E4C9DD7E /* LocationDomain.swift in Sources */,
+				AAB946F25198A1BE77307C2F /* LocationObserver.swift in Sources */,
+				0A31B5075461853BDC513685 /* LocationPickerView.swift in Sources */,
+				E2634B64C10D7ACEE42B38D6 /* LocationPickerViewModel.swift in Sources */,
+				B5DA7DFDC30CE2A3FC82AE08 /* LocationSelectionState.swift in Sources */,
+				7B9E245DAE2A540E53D4AB82 /* ManualSimulationSession.swift in Sources */,
+				DBA9472FBD63FC421A22C6F3 /* NetworkControllerLinkTransport.swift in Sources */,
+				5DC62CDA96B694F6627A452C /* Pairing.swift in Sources */,
+				4A3179EDCDE3AD836C6B78D6 /* RemoteLocationLearningApp.swift in Sources */,
+				0424120E78793B82A9C0EEFC /* TLSControllerServer.swift in Sources */,
+				170FE9E57A66954667B8B70A /* TrustedControllerLink.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B2F4AB19EA69A68ED65B4B46 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4F76A436D1D407E2828FEA49 /* RemoteLocationLearning */;
+			targetProxy = E50B6607BE4007DEDA56C21D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		19FAF89582E0CEF7B4608B68 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		2590E51C63F9BD91B978C91C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 492552E0E66D6D7BD046B2EF /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "UI tests use local-network access only when explicitly exercising Controller Link behavior.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.sayori.remotelocation.learning-uitests";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = RemoteLocationLearning;
+			};
+			name = Debug;
+		};
+		86BC5A9A7291C4DADE2B3859 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 492552E0E66D6D7BD046B2EF /* Signing.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/RemoteLocationLearning-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.sayori.remotelocation.learning;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A45321D97878F70CD6FDC576 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 492552E0E66D6D7BD046B2EF /* Signing.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/RemoteLocationLearning-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.sayori.remotelocation.learning;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		D76F27C1980B4955CA957205 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		E35499CED30E7D57B272E508 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 492552E0E66D6D7BD046B2EF /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "UI tests use local-network access only when explicitly exercising Controller Link behavior.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.sayori.remotelocation.learning-uitests";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = RemoteLocationLearning;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2F427840287D89CA6A269C41 /* Build configuration list for PBXProject "RemoteLocation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				19FAF89582E0CEF7B4608B68 /* Debug */,
+				D76F27C1980B4955CA957205 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		504176E5EA48A29FAE595603 /* Build configuration list for PBXNativeTarget "RemoteLocationLearning" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86BC5A9A7291C4DADE2B3859 /* Debug */,
+				A45321D97878F70CD6FDC576 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9213DE526D15930462C9F669 /* Build configuration list for PBXNativeTarget "RemoteLocationLearningUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2590E51C63F9BD91B978C91C /* Debug */,
+				E35499CED30E7D57B272E508 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7C484CABA92041C9C4428A43 /* Project object */;
+}

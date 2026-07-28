@@ -1,0 +1,123 @@
+import Foundation
+import MapKit
+
+struct LocationSearchResult: Identifiable, Equatable, Sendable {
+  let id: String
+  let name: String
+  let detail: String?
+  let location: SelectedLocation
+}
+
+enum LocationSearchStatus: Equatable, Sendable {
+  case idle
+  case searching
+  case results([LocationSearchResult])
+  case empty
+  case failed
+}
+
+@MainActor
+protocol LocationSearching {
+  func search(query: String) async throws -> [LocationSearchResult]
+}
+
+struct MapKitLocationSearcher: LocationSearching {
+  func search(query: String) async throws -> [LocationSearchResult] {
+    let request = MKLocalSearch.Request()
+    request.naturalLanguageQuery = query
+    request.resultTypes = [.address, .pointOfInterest]
+    let response = try await MKLocalSearch(request: request).start()
+
+    return response.mapItems.prefix(10).compactMap { item in
+      let coordinate = item.placemark.coordinate
+      guard
+        let location = try? SelectedLocation(
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude
+        )
+      else {
+        return nil
+      }
+      let name = item.name ?? item.placemark.title ?? "Unnamed Place"
+      let placemarkTitle = item.placemark.title
+      let detail = placemarkTitle == name ? nil : placemarkTitle
+      return LocationSearchResult(
+        id: "\(coordinate.latitude),\(coordinate.longitude),\(name)",
+        name: name,
+        detail: detail,
+        location: location
+      )
+    }
+  }
+}
+
+#if DEBUG
+  private enum FixtureLocationSearchError: Error {
+    case unavailable
+  }
+
+  struct FixtureLocationSearcher: LocationSearching {
+    func search(query: String) async throws -> [LocationSearchResult] {
+      let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !query.isEmpty else {
+        return []
+      }
+      if query.localizedCaseInsensitiveCompare("empty") == .orderedSame {
+        return []
+      }
+      if query.localizedCaseInsensitiveCompare("failure") == .orderedSame {
+        throw FixtureLocationSearchError.unavailable
+      }
+      let location = try SelectedLocation(latitude: 35.6762, longitude: 139.6503)
+      return [
+        LocationSearchResult(
+          id: "fixture-search-result",
+          name: "Search Fixture",
+          detail: "Deterministic UI test result",
+          location: location
+        )
+      ]
+    }
+  }
+#endif
+
+@MainActor
+final class LocationPickerViewModel: ObservableObject {
+  @Published var query = ""
+  @Published private(set) var status: LocationSearchStatus = .idle
+
+  private let searcher: any LocationSearching
+  private var searchTask: Task<Void, Never>?
+
+  init(searcher: any LocationSearching = MapKitLocationSearcher()) {
+    self.searcher = searcher
+  }
+
+  var canSearch: Bool {
+    !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && status != .searching
+  }
+
+  func search() {
+    let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !query.isEmpty else {
+      status = .idle
+      return
+    }
+
+    searchTask?.cancel()
+    status = .searching
+    searchTask = Task { [weak self] in
+      guard let self else { return }
+      do {
+        let results = try await searcher.search(query: query)
+        guard !Task.isCancelled else { return }
+        status = results.isEmpty ? .empty : .results(results)
+      } catch is CancellationError {
+      } catch {
+        guard !Task.isCancelled else { return }
+        status = .failed
+      }
+    }
+  }
+}
