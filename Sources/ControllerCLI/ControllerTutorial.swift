@@ -1,0 +1,18 @@
+public enum ControllerTutorial {
+  public static let output = """
+    Remote Location setup and use
+
+    1. Install the approved full Xcode, open Xcode once, and finish first-launch setup.
+    2. Connect and unlock the iPhone. Confirm Trust on both the Mac and iPhone if prompted.
+    3. Enable Developer Mode in iPhone Settings > Privacy & Security and complete the restart confirmation.
+    4. Open the app project in Xcode and enable automatic signing for a development team. A Personal Team build may need to be rebuilt and reprovisioned every seven days.
+    5. Build, install, and launch Remote Location Learning on the iPhone from Xcode.
+    6. Keep the private Active Test Device selector in REMOTE_LOCATION_DEVICE or pass it with --device. Keep the approved Xcode Contents/Developer path in REMOTE_LOCATION_DEVELOPER_DIR or pass --developer-directory.
+    7. Run `remote-location-controller doctor` to check the read-only Xcode/devicectl workflow. Doctor never changes system or device settings.
+    8. Run `remote-location-controller link identity create` once, then run `remote-location-controller link serve` while using the app.
+    9. In the app, allow Location and Local Network access, pair with the short-lived code, and choose a location.
+    10. Tap Apply, wait for the controller acknowledgement, then Verify in the Learning App. Tap Stop to clear the static simulation; a fresh physical callback is not guaranteed immediately.
+
+    The production Injection Backend is Xcode's public devicectl location workflow. Device selectors, signing details, and pairing material stay private.
+    """
+}

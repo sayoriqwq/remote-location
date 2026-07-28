@@ -1,0 +1,64 @@
+// swift-tools-version: 6.0
+
+import PackageDescription
+
+let package = Package(
+  name: "RemoteLocation",
+  platforms: [
+    .iOS(.v18),
+    .macOS(.v15),
+  ],
+  products: [
+    .library(name: "LocationDomain", targets: ["LocationDomain"]),
+    .library(name: "ControllerLink", targets: ["ControllerLink"]),
+    .library(name: "SimulationController", targets: ["SimulationController"]),
+    .library(name: "ControllerCLI", targets: ["ControllerCLI"]),
+    .executable(
+      name: "remote-location-controller",
+      targets: ["RemoteLocationController"]
+    ),
+  ],
+  dependencies: [
+    .package(
+      url: "https://github.com/apple/swift-argument-parser.git",
+      from: "1.5.0"
+    )
+  ],
+  targets: [
+    .target(name: "LocationDomain"),
+    .target(name: "ControllerLink"),
+    .target(
+      name: "SimulationController",
+      dependencies: ["LocationDomain"]
+    ),
+    .target(
+      name: "ControllerCLI",
+      dependencies: [
+        "ControllerLink",
+        "LocationDomain",
+        "SimulationController",
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+      ]
+    ),
+    .executableTarget(
+      name: "RemoteLocationController",
+      dependencies: ["ControllerCLI"]
+    ),
+    .testTarget(
+      name: "LocationDomainTests",
+      dependencies: ["LocationDomain"]
+    ),
+    .testTarget(
+      name: "ControllerLinkTests",
+      dependencies: ["ControllerLink"]
+    ),
+    .testTarget(
+      name: "SimulationControllerTests",
+      dependencies: ["SimulationController"]
+    ),
+    .testTarget(
+      name: "ControllerCLITests",
+      dependencies: ["ControllerCLI"]
+    ),
+  ]
+)

@@ -1,0 +1,9 @@
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+.swiftpm/
+
+# Signing identity is local to the developer and must never enter the repository.
+Config/Signing.local.xcconfig
