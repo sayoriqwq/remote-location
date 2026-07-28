@@ -173,6 +173,39 @@ final class RemoteLocationLearningUITests: XCTestCase {
     applyAndVerifySimulation(of: coordinate, in: app)
   }
 
+  func testLocationPickerKeepsMapActionsVisibleAndRequiresExplicitDismissal() {
+    let app = XCUIApplication()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+
+    let picker = app.otherElements["location-picker"]
+    let map = app.otherElements["location-map"]
+    let selectMapCenter = app.buttons["use-map-center"]
+    let done = app.buttons["close-location-picker"]
+
+    XCTAssertTrue(picker.waitForExistence(timeout: 5))
+    XCTAssertTrue(map.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectMapCenter.waitForExistence(timeout: 5))
+    XCTAssertTrue(done.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectMapCenter.isHittable)
+    XCTAssertTrue(done.isHittable)
+    XCTAssertGreaterThanOrEqual(selectMapCenter.frame.width, 44)
+    XCTAssertGreaterThanOrEqual(selectMapCenter.frame.height, 44)
+
+    map.swipeDown()
+    XCTAssertTrue(picker.waitForExistence(timeout: 2))
+
+    selectMapCenter.tap()
+    XCTAssertTrue(
+      app.staticTexts["location-selection-confirmation"].waitForExistence(timeout: 5)
+    )
+    done.tap()
+    XCTAssertFalse(picker.waitForExistence(timeout: 2))
+  }
+
   func testSearchResultReachesTheFreshObservationVerificationSeam() {
     let app = XCUIApplication()
     app.launchEnvironment["REMOTE_LOCATION_E2E_SEARCH_FIXTURE"] = "1"
@@ -221,8 +254,14 @@ final class RemoteLocationLearningUITests: XCTestCase {
     openLocationPicker(in: app)
     app.buttons["use-map-center"].tap()
     app.buttons["close-location-picker"].tap()
-    let previousLatitude = app.staticTexts["selected-latitude"].label
-    let previousLongitude = app.staticTexts["selected-longitude"].label
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    let previousLatitude = selectedLatitude.label
+    let previousLongitude = selectedLongitude.label
 
     openLocationPicker(in: app)
     let field = app.textFields["place-search-input"]
@@ -243,9 +282,16 @@ final class RemoteLocationLearningUITests: XCTestCase {
     )
     app.buttons["close-location-picker"].tap()
 
-    XCTAssertTrue(app.staticTexts["selection-source"].label.hasSuffix("Map"))
-    XCTAssertEqual(app.staticTexts["selected-latitude"].label, previousLatitude)
-    XCTAssertEqual(app.staticTexts["selected-longitude"].label, previousLongitude)
+    let selectionSource = app.staticTexts["selection-source"]
+    scrollUp(until: selectionSource, in: app)
+    XCTAssertTrue(selectionSource.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectionSource.label.hasSuffix("Map"))
+    XCTAssertEqual(selectedLatitude.label, previousLatitude)
+    XCTAssertEqual(selectedLongitude.label, previousLongitude)
   }
 
   func testPublicLocationBackendRemainsStableForTenMinutes() throws {

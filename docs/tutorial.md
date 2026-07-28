@@ -15,11 +15,14 @@ After that, the normal startup flow is:
 
 ```console
 cd /Users/sayori/Desktop/remote-location
+rl-install # once, and again only after controller source changes
 rl-doctor
 rl-start
 ```
 
-`rl-start` keeps the trusted Controller Link open for one hour by default. Use `rl-start --seconds 86400` for a longer session and stop it with Control-C; the wrapper then performs an idempotent cleanup reset. `rl-reset` clears an active simulation without starting the link.
+`rl-install` creates a stable, signed controller executable and conservatively authorizes that exact executable to use the existing controller private key. The first migration can show one macOS Keychain approval; approve the signed controller permanently. It does not delete or replace the existing TLS identity, and it stops before changing Keychain if the signing requirement differs from the previous installation.
+
+Daily commands never rebuild or re-sign the controller. `rl-start` keeps the trusted Controller Link open for one hour by default. Use `rl-start --seconds 86400` for a longer session and stop it with Control-C; the wrapper then performs an idempotent cleanup reset. `rl-reset` clears an active simulation without starting the link.
 
 When exactly one paired physical iPhone is known to Xcode, these commands select it automatically without printing its private identifier. If discovery is ambiguous, copy `.env.example` to the Git-ignored `.env.local` and set `REMOTE_LOCATION_DEVICE` there.
 
@@ -47,17 +50,19 @@ Follow only the recovery step for a failed check. Location and Local Network dec
 
 ## Pair and use the controller
 
-Create the Keychain-backed controller identity once:
+Install or update the repository-local signed controller:
 
 ```console
-remote-location-controller link identity create
+rl-install
 ```
 
 Start the trusted local Controller Link and keep it open:
 
 ```console
-remote-location-controller link serve
+rl-start
 ```
+
+An iPhone that already trusts the preserved controller identity reconnects without a new six-digit code. A new or reset iPhone still performs the explicit one-time pairing flow.
 
 In the Learning App:
 

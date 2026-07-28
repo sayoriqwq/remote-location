@@ -9,10 +9,10 @@ public enum ControllerTutorial {
     5. Build, install, and launch Remote Location Learning on the iPhone from Xcode.
     6. Keep the private Active Test Device selector in REMOTE_LOCATION_DEVICE or pass it with --device. Keep the approved Xcode Contents/Developer path in REMOTE_LOCATION_DEVELOPER_DIR or pass --developer-directory.
     7. Run `remote-location-controller doctor` to check the read-only Xcode/devicectl workflow. Doctor never changes system or device settings.
-    8. Run `remote-location-controller link identity create` once, then run `remote-location-controller link serve` while using the app.
+    8. Run `rl-install` once to build and authorize the stable signed controller, then use `rl-start` for daily sessions.
     9. In the app, allow Location and Local Network access, pair with the short-lived code, and choose a location.
     10. Tap Apply, wait for the controller acknowledgement, then Verify in the Learning App. Tap Stop to clear the static simulation; a fresh physical callback is not guaranteed immediately.
 
-    The production Injection Backend is Xcode's public devicectl location workflow. Device selectors, signing details, and pairing material stay private.
+    `rl-install` preserves the existing Keychain identity and stops before mutation if the signing requirement changes. The production Injection Backend is Xcode's public devicectl location workflow. Device selectors, signing details, and pairing material stay private.
     """
 }

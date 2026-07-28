@@ -1,0 +1,164 @@
+#!/usr/bin/env fish
+
+set --local script_dir (path resolve (path dirname (status filename)))
+source $script_dir/_rl-common.fish
+or exit 1
+
+rl_prepare_environment
+or exit $status
+
+set --local identifier dev.sayori.remotelocation.controller
+set --local install_root (path resolve .build/controller)
+set --local install_bin $install_root/bin
+set --local executable $install_bin/remote-location-controller
+set --local requirement_file $install_root/designated-requirement
+set --local source_file $install_root/source-fingerprint
+set --local staging_root (mktemp -d .build/controller-install.XXXXXX)
+or exit 1
+set --local build_path $staging_root/build
+
+swift build --configuration release --product remote-location-controller --build-path $build_path
+or exit $status
+set --local product_bin (swift build --configuration release --show-bin-path --build-path $build_path)
+or exit $status
+set --local candidate $staging_root/remote-location-controller
+cp $product_bin/remote-location-controller $candidate
+or exit $status
+chmod 755 $candidate
+
+set --local signing_identity
+if set --query REMOTE_LOCATION_CODE_SIGN_IDENTITY; and test -n "$REMOTE_LOCATION_CODE_SIGN_IDENTITY"
+    set signing_identity $REMOTE_LOCATION_CODE_SIGN_IDENTITY
+else
+    set --local identities (
+        security find-identity -v -p codesigning |
+        string match --regex --groups-only '^\s*\d+\) ([0-9A-F]{40}) '
+    )
+    if test (count $identities) -ne 1
+        echo "Expected one valid code-signing identity. Set REMOTE_LOCATION_CODE_SIGN_IDENTITY privately." >&2
+        exit 1
+    end
+    set signing_identity $identities[1]
+end
+
+codesign --force --sign $signing_identity --identifier $identifier --timestamp=none $candidate
+or exit $status
+codesign --verify --strict $candidate
+or exit $status
+set --local requirement (codesign -d -r- $candidate 2>&1 | string match -r '^designated => .*')
+if test -z "$requirement"; or string match --quiet '*cdhash H*' $requirement
+    echo "The candidate controller does not have a stable signing requirement." >&2
+    exit 1
+end
+if not string match --quiet "*identifier \"$identifier\"*" $requirement
+    echo "The candidate controller does not have the required identifier." >&2
+    exit 1
+end
+
+# Compute and stage every piece of metadata before replacing the installed controller.
+set --local source_fingerprint (rl_controller_source_fingerprint)
+or exit $status
+set --local staged_requirement $staging_root/designated-requirement
+set --local staged_source $staging_root/source-fingerprint
+printf '%s\n' $requirement > $staged_requirement
+or exit $status
+printf '%s\n' $source_fingerprint > $staged_source
+or exit $status
+
+if test -f $requirement_file
+    set --local previous_requirement (string collect < $requirement_file)
+    if test "$previous_requirement" != "$requirement"
+        echo "The signing requirement changed. Existing Keychain trust was not modified." >&2
+        exit 1
+    end
+end
+
+mkdir -p $install_bin
+or exit $status
+set --local backup
+if test -f $executable
+    set backup $staging_root/previous-controller
+    cp $executable $backup
+    or exit $status
+end
+set --local requirement_backup
+if test -f $requirement_file
+    set requirement_backup $staging_root/previous-designated-requirement
+    cp $requirement_file $requirement_backup
+    or exit $status
+end
+set --local source_backup
+if test -f $source_file
+    set source_backup $staging_root/previous-source-fingerprint
+    cp $source_file $source_backup
+    or exit $status
+end
+
+function rollback_install --no-scope-shadowing
+    set --local rollback_status 0
+    if test -n "$backup"
+        cp $backup $executable
+        or set rollback_status $status
+    else
+        command rm -f -- $executable
+        or set rollback_status $status
+    end
+    if test -n "$requirement_backup"
+        cp $requirement_backup $requirement_file
+        or set rollback_status $status
+    else
+        command rm -f -- $requirement_file
+        or set rollback_status $status
+    end
+    if test -n "$source_backup"
+        cp $source_backup $source_file
+        or set rollback_status $status
+    else
+        command rm -f -- $source_file
+        or set rollback_status $status
+    end
+    return $rollback_status
+end
+
+cp $candidate $executable
+or begin
+    set --local failure_status $status
+    rollback_install
+    or echo "Installation rollback failed; inspect $install_root before retrying." >&2
+    exit $failure_status
+end
+chmod 755 $executable
+or begin
+    set --local failure_status $status
+    rollback_install
+    or echo "Installation rollback failed; inspect $install_root before retrying." >&2
+    exit $failure_status
+end
+
+cp $staged_requirement $requirement_file
+or begin
+    set --local failure_status $status
+    rollback_install
+    or echo "Installation rollback failed; inspect $install_root before retrying." >&2
+    exit $failure_status
+end
+cp $staged_source $source_file
+or begin
+    set --local failure_status $status
+    rollback_install
+    or echo "Installation rollback failed; inspect $install_root before retrying." >&2
+    exit $failure_status
+end
+
+# Keychain authorization is the final fallible commit. Every filesystem artifact is
+# already published and can be restored if authorization declines or fails.
+$executable link identity authorize-current-executable
+set --local authorization_status $status
+if test $authorization_status -ne 0
+    rollback_install
+    or echo "Installation rollback failed; inspect $install_root before retrying." >&2
+    echo "Installation stopped without replacing the existing controller identity." >&2
+    exit $authorization_status
+end
+
+echo "Stable controller installed. Daily rl-start, rl-doctor, and rl-reset are ready."

@@ -31,7 +31,7 @@ struct ContentView: View {
     .onReceive(observer.$latestObservation.compactMap { $0 }) { observation in
       model.record(observation)
     }
-    .sheet(isPresented: $showingLocationPicker) {
+    .fullScreenCover(isPresented: $showingLocationPicker) {
       LocationPickerView(selected: model.selection.selected) { location, source in
         model.select(location, source: source)
       }

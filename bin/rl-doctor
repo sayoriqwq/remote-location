@@ -6,5 +6,7 @@ or exit 1
 
 rl_prepare_environment
 or exit $status
+set --local controller (rl_controller_executable)
+or exit $status
 
-exec swift run remote-location-controller doctor
+exec $controller doctor

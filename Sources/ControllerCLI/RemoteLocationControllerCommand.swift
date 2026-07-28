@@ -195,7 +195,7 @@ public struct RemoteLocationControllerCommand: AsyncParsableCommand {
     public struct Identity: AsyncParsableCommand {
       public static let configuration = CommandConfiguration(
         abstract: "Manage the Mac controller TLS identity.",
-        subcommands: [Create.self]
+        subcommands: [Create.self, AuthorizeCurrentExecutable.self]
       )
 
       public init() {}
@@ -225,6 +225,43 @@ public struct RemoteLocationControllerCommand: AsyncParsableCommand {
           )
           _ = try KeychainTLSIdentity.load(label: label)
           print("The controller TLS identity was created in Keychain.")
+        }
+      }
+
+      public struct AuthorizeCurrentExecutable: AsyncParsableCommand {
+        public static let configuration = CommandConfiguration(
+          commandName: "authorize-current-executable",
+          abstract: "Add this signed controller to the existing private-key ACL."
+        )
+
+        @Option(name: .long, help: "Keychain label for the controller identity.")
+        public var label = "Remote Location Controller"
+
+        public init() {}
+
+        public func run() async throws {
+          do {
+            _ = try ControllerIdentityAccessAuthorizer(
+              manager: MacKeychainControllerIdentityAccessManager()
+            ).authorize(label: label)
+            print("The existing controller identity was preserved and authorized.")
+          } catch KeychainTLSIdentityError.notFound {
+            throw ValidationError(
+              "The existing controller identity is missing. No identity was created or replaced."
+            )
+          } catch ControllerIdentityAccessAuthorizationError.identityChanged {
+            throw ValidationError(
+              "The controller identity changed during authorization. Stop and inspect Keychain; no replacement was requested."
+            )
+          } catch let error as ControllerIdentityAccessAuthorizationError {
+            throw ValidationError(
+              "The existing controller identity could not be authorized (\(error)). It was not deleted or replaced."
+            )
+          } catch {
+            throw ValidationError(
+              "The existing controller identity could not be authorized. It was not deleted or replaced."
+            )
+          }
         }
       }
     }

@@ -59,3 +59,61 @@ function rl_prepare_environment
     echo "Copy .env.example to .env.local and set REMOTE_LOCATION_DEVICE privately." >&2
     return 1
 end
+
+function rl_controller_source_fingerprint
+    set --local files Package.swift
+    if test -f Package.resolved
+        set --append files Package.resolved
+    end
+    set --append files (find Sources -type f -name '*.swift' | sort)
+
+    begin
+        for file in $files
+            git hash-object $file
+            or return 1
+        end
+    end | shasum -a 256 | string split ' ' --fields 1
+end
+
+function rl_controller_executable
+    set --local install_root (path resolve .build/controller)
+    set --local executable $install_root/bin/remote-location-controller
+    set --local requirement_file $install_root/designated-requirement
+    set --local source_file $install_root/source-fingerprint
+
+    if not test -x $executable; or not test -f $requirement_file; or not test -f $source_file
+        echo "The stable controller is not installed. Run rl-install once." >&2
+        return 1
+    end
+    codesign --verify --strict $executable >/dev/null 2>&1
+    or begin
+        echo "The installed controller signature is invalid. Run rl-install." >&2
+        return 1
+    end
+
+    set --local actual_requirement (codesign -d -r- $executable 2>&1 | string match -r '^designated => .*')
+    set --local expected_requirement (string collect < $requirement_file)
+    set --local required_identifier dev.sayori.remotelocation.controller
+    if test -z "$actual_requirement"; or not string match --quiet "*identifier \"$required_identifier\"*" $actual_requirement
+        echo "The installed controller does not have the required fixed identifier. Run rl-install." >&2
+        return 1
+    end
+    if test "$actual_requirement" != "$expected_requirement"
+        echo "The installed controller signing identity changed. Refusing to use it; inspect before reinstalling." >&2
+        return 1
+    end
+    if string match --quiet '*cdhash H*' $actual_requirement
+        echo "The installed controller has an unstable ad-hoc signature. Run rl-install." >&2
+        return 1
+    end
+
+    set --local installed_source (string trim < $source_file)
+    set --local current_source (rl_controller_source_fingerprint)
+    or return 1
+    if test "$installed_source" != "$current_source"
+        echo "The controller source changed after installation. Run rl-install to update it." >&2
+        return 1
+    end
+
+    echo $executable
+end

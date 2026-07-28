@@ -20,6 +20,8 @@ end
 
 rl_prepare_environment
 or exit $status
+set --local controller (rl_controller_executable)
+or exit $status
 
 set --local seconds 3600
 if set --query REMOTE_LOCATION_SECONDS
@@ -29,13 +31,13 @@ if set --query _flag_seconds
     set seconds $_flag_seconds
 end
 
-swift run remote-location-controller link serve --seconds $seconds
+$controller link serve --seconds $seconds
 set --local serve_status $status
 
 # Normal expiry already performs cleanup inside the controller. A signal or other
 # abnormal exit may bypass that lifecycle, so make the reset explicit and idempotent.
 if test $serve_status -ne 0
-    swift run remote-location-controller reset
+    $controller reset
 end
 
 exit $serve_status

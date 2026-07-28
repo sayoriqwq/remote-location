@@ -88,36 +88,48 @@ struct LocationPickerView: View {
         }
       }
     }
+    .interactiveDismissDisabled()
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("location-picker")
   }
 
   private var mapSection: some View {
     GroupBox("Map") {
       VStack(alignment: .leading, spacing: 12) {
-        Map(position: $cameraPosition) {
-          if let selected {
-            Marker(
-              "Selected",
-              coordinate: CLLocationCoordinate2D(
-                latitude: selected.latitude,
-                longitude: selected.longitude
+        ZStack {
+          Map(position: $cameraPosition) {
+            if let selected {
+              Marker(
+                "Selected",
+                coordinate: CLLocationCoordinate2D(
+                  latitude: selected.latitude,
+                  longitude: selected.longitude
+                )
               )
-            )
+            }
           }
+          .onMapCameraChange(frequency: .onEnd) { context in
+            mapCenter = context.region.center
+          }
+          .accessibilityIdentifier("location-map")
+
+          Button {
+            selectMapCenter()
+          } label: {
+            Image(systemName: "plus")
+              .font(.title2.weight(.semibold))
+              .foregroundStyle(.blue)
+              .frame(minWidth: 44, minHeight: 44)
+              .background(.thinMaterial, in: Circle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Use Map Center as Selected Location")
+          .accessibilityIdentifier("use-map-center")
+          .zIndex(1)
         }
         .frame(height: 300)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay {
-          Image(systemName: "plus")
-            .font(.title2.weight(.semibold))
-            .foregroundStyle(.blue)
-            .padding(8)
-            .background(.thinMaterial, in: Circle())
-            .allowsHitTesting(false)
-        }
-        .onMapCameraChange(frequency: .onEnd) { context in
-          mapCenter = context.region.center
-        }
-        .accessibilityIdentifier("location-map")
+        .accessibilityElement(children: .contain)
 
         LabeledContent("Map center") {
           Text(
@@ -127,21 +139,6 @@ struct LocationPickerView: View {
           .accessibilityIdentifier("map-center-coordinate")
         }
 
-        Button("Use Map Center as Selected Location") {
-          guard
-            let location = try? SelectedLocation(
-              latitude: mapCenter.latitude,
-              longitude: mapCenter.longitude
-            )
-          else { return }
-          commit(
-            location,
-            source: .map,
-            confirmation: "Map center is now the Selected Location."
-          )
-        }
-        .buttonStyle(.borderedProminent)
-        .accessibilityIdentifier("use-map-center")
       }
       .padding(.top, 8)
     }
@@ -236,5 +233,19 @@ struct LocationPickerView: View {
       selectionConfirmation = nil
       selectionFailure = "Finish the current apply or stop request before changing the selection."
     }
+  }
+
+  private func selectMapCenter() {
+    guard
+      let location = try? SelectedLocation(
+        latitude: mapCenter.latitude,
+        longitude: mapCenter.longitude
+      )
+    else { return }
+    commit(
+      location,
+      source: .map,
+      confirmation: "Map center is now the Selected Location."
+    )
   }
 }

@@ -14,8 +14,8 @@ final class ControllerTutorialTests: XCTestCase {
       "automatic signing",
       "seven days",
       "devicectl",
-      "link identity create",
-      "link serve",
+      "rl-install",
+      "rl-start",
       "Apply",
       "Verify",
       "Stop",
@@ -37,6 +37,11 @@ final class ControllerTutorialTests: XCTestCase {
     XCTAssertTrue(
       try RemoteLocationControllerCommand.parseAsRoot(["tutorial"])
         is RemoteLocationControllerCommand.Tutorial
+    )
+    XCTAssertTrue(
+      try RemoteLocationControllerCommand.parseAsRoot([
+        "link", "identity", "authorize-current-executable",
+      ]) is RemoteLocationControllerCommand.Link.Identity.AuthorizeCurrentExecutable
     )
   }
 }
