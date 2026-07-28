@@ -1,6 +1,12 @@
-# Remote Location
+<p align="center">
+  <img src="docs/assets/brand/remote-location-mark.png" alt="Remote Location geometric mark" width="180">
+</p>
 
-在当前个人开发环境中，通过 Mac 上的可信控制器为已连接的 iPhone 设置静态测试位置。
+<h1 align="center">Remote Location</h1>
+
+<p align="center">
+  在当前个人开发环境中，通过 Mac 上的可信控制器为已连接的 iPhone 设置静态测试位置。
+</p>
 
 ## 使用入口
 
@@ -14,4 +20,3 @@
 cd /Users/sayori/Desktop/remote-location
 rl-start
 ```
-
