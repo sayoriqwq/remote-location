@@ -3,10 +3,12 @@ import Foundation
 import SwiftUI
 
 struct ContentView: View {
+  @Binding var language: AppLanguage
   @StateObject private var observer = LocationObserver()
   @StateObject private var model = BaselineViewModel()
   @StateObject private var controllerLink = ControllerLinkViewModel()
   @State private var showingLocationPicker = false
+  @Environment(\.locale) private var locale
   @Environment(\.openURL) private var openURL
 
   var body: some View {
@@ -35,12 +37,37 @@ struct ContentView: View {
               .font(.headline)
           }
           .accessibilityElement(children: .combine)
-          .accessibilityLabel("\(appDisplayName), trusted iOS location simulation")
+          .accessibilityLabel(
+            Text(
+              AppLocalization.format(
+                "%@, trusted iOS location simulation",
+                locale: locale,
+                appDisplayName
+              )
+            )
+          )
           .accessibilityIdentifier("brand-header")
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            language = language.alternate
+          } label: {
+            HStack(spacing: 4) {
+              Image(systemName: "globe")
+              Text(verbatim: language.alternateButtonTitle)
+            }
+            .font(.subheadline.weight(.semibold))
+          }
+          .accessibilityLabel(Text(languageSwitchAccessibilityLabel))
+          .accessibilityIdentifier("language-toggle")
         }
       }
     }
     .task {
+      if let languageFixture {
+        language = languageFixture
+      }
       if locationPermissionFixture == nil {
         observer.start()
       }
@@ -61,6 +88,36 @@ struct ContentView: View {
   private var appDisplayName: String {
     Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
       ?? "Pinshift"
+  }
+
+  private func localized(_ key: String) -> String {
+    AppLocalization.string(key, locale: locale)
+  }
+
+  private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    String(
+      format: localized(key),
+      locale: locale,
+      arguments: arguments
+    )
+  }
+
+  private func formattedDateTime(_ date: Date) -> String {
+    date.formatted(
+      Date.FormatStyle(
+        date: .numeric,
+        time: .standard,
+        locale: locale
+      )
+    )
+  }
+
+  private var languageSwitchAccessibilityLabel: String {
+    localized(
+      language == .english
+        ? "Switch to Simplified Chinese"
+        : "Switch to English"
+    )
   }
 
   private var controllerLinkSection: some View {
@@ -193,7 +250,7 @@ struct ContentView: View {
       }
 
       if let inputError = model.inputError {
-        Text(inputError)
+        Text(localized(inputError))
           .foregroundStyle(.red)
           .accessibilityIdentifier("selection-error")
       }
@@ -208,12 +265,14 @@ struct ContentView: View {
       .font(.footnote)
       .foregroundStyle(.secondary)
 
-      Button(model.isApplying ? "Applying…" : "Apply Selected Location") {
+      Button {
         guard let request = model.beginManualApply() else { return }
         Task {
           let response = await controllerLink.apply(request)
           model.receiveApplyResponse(response, for: request)
         }
+      } label: {
+        Text(localized(model.isApplying ? "Applying…" : "Apply Selected Location"))
       }
       .disabled(
         model.selection.selected == nil
@@ -232,12 +291,14 @@ struct ContentView: View {
           .accessibilityIdentifier("active-simulation-request-id")
       }
 
-      Button(model.isStopping ? "Stopping…" : "Stop Simulation") {
+      Button {
         guard let requestID = model.beginStop() else { return }
         Task {
           let response = await controllerLink.stop(requestID: requestID)
           model.receiveStopResponse(response, for: requestID)
         }
+      } label: {
+        Text(localized(model.isStopping ? "Stopping…" : "Stop Simulation"))
       }
       .disabled(
         model.manualSession.activeAppliedRequest == nil
@@ -383,7 +444,7 @@ struct ContentView: View {
             .accessibilityIdentifier("observed-longitude")
         }
         LabeledContent("Timestamp") {
-          Text(observation.timestamp.formatted(date: .numeric, time: .standard))
+          Text(formattedDateTime(observation.timestamp))
             .accessibilityIdentifier("observed-timestamp")
         }
         LabeledContent(
@@ -418,7 +479,7 @@ struct ContentView: View {
       }
 
       if let errorMessage = observer.errorMessage {
-        Text(errorMessage)
+        Text(localized(errorMessage))
           .foregroundStyle(.red)
           .accessibilityIdentifier("location-error")
       }
@@ -440,7 +501,7 @@ struct ContentView: View {
       .accessibilityIdentifier("start-observation-window")
 
       if let requestedAt = model.session.requestedAt {
-        LabeledContent("Requested", value: requestedAt.formatted(date: .numeric, time: .standard))
+        LabeledContent("Requested", value: formattedDateTime(requestedAt))
       }
 
       matchStatus
@@ -469,13 +530,21 @@ struct ContentView: View {
       .accessibilityIdentifier("match-status")
     case .timedOut(let elapsedSeconds):
       Label(
-        "Observation arrived after 15 seconds (\(elapsedSeconds.formatted(.number.precision(.fractionLength(2)))) s)",
+        AppLocalization.format(
+          "Observation arrived after 15 seconds (%@ s)",
+          locale: locale,
+          elapsedSeconds.formatted(.number.precision(.fractionLength(2)))
+        ),
         systemImage: "timer"
       )
       .accessibilityIdentifier("match-status")
     case .tooFar(let distanceMeters):
       Label(
-        "Observation is \(distanceMeters.formatted(.number.precision(.fractionLength(2)))) m away",
+        AppLocalization.format(
+          "Observation is %@ m away",
+          locale: locale,
+          distanceMeters.formatted(.number.precision(.fractionLength(2)))
+        ),
         systemImage: "location.slash"
       )
       .accessibilityIdentifier("match-status")
@@ -497,51 +566,51 @@ struct ContentView: View {
 
   private var authorizationDescription: String {
     switch effectiveLocationPermission {
-    case .notDetermined: "Not requested"
-    case .restricted: "Restricted"
-    case .denied: "Denied"
-    case .authorized: "While Using the App"
-    case .unknown: "Unknown"
+    case .notDetermined: localized("Not requested")
+    case .restricted: localized("Restricted")
+    case .denied: localized("Denied")
+    case .authorized: localized("While Using the App")
+    case .unknown: localized("Unknown")
     }
   }
 
   private func selectionSourceDescription(_ source: LocationSelectionSource) -> String {
     switch source {
-    case .manual: "Manual coordinates"
-    case .map: "Map"
-    case .search: "Place search"
+    case .manual: localized("Manual coordinates")
+    case .map: localized("Map")
+    case .search: localized("Place search")
     }
   }
 
   private var controllerLinkStatus: String {
     switch controllerLink.state {
     case .notDiscovered:
-      "Searching for your Mac controller…"
+      localized("Searching for your Mac controller…")
     case .awaitingPairing:
-      "Controller found — enter the code shown on your Mac"
+      localized("Controller found — enter the code shown on your Mac")
     case .connected:
-      "Trusted controller connected"
+      localized("Trusted controller connected")
     case .unavailable(.disconnected):
-      "Controller disconnected"
+      localized("Controller disconnected")
     case .unavailable(.tlsIdentityMismatch):
-      "Controller identity changed — connection rejected"
+      localized("Controller identity changed — connection rejected")
     case .unavailable(.pairingFailed):
-      "Pairing code was rejected"
+      localized("Pairing code was rejected")
     case .unavailable(.transportUnavailable):
-      "Controller unavailable"
+      localized("Controller unavailable")
     case .localNetworkDenied:
-      "Local Network access is denied"
+      localized("Local Network access is denied")
     }
   }
 
   private var localNetworkPermissionDescription: String {
     switch effectiveLocalNetworkPermission {
     case .notYetConfirmed:
-      "Not yet confirmed"
+      localized("Not yet confirmed")
     case .allowed:
-      "Allowed"
+      localized("Allowed")
     case .denied:
-      "Denied"
+      localized("Denied")
     }
   }
 
@@ -591,91 +660,125 @@ struct ContentView: View {
     #endif
   }
 
+  private var languageFixture: AppLanguage? {
+    #if DEBUG
+      guard
+        let value = ProcessInfo.processInfo.environment[
+          "REMOTE_LOCATION_E2E_APP_LANGUAGE"
+        ]
+      else {
+        return nil
+      }
+      return AppLanguage(rawValue: value)
+    #else
+      nil
+    #endif
+  }
+
   private var xcodeDeviceWorkflowDescription: String {
     switch controllerLink.backendReadiness {
     case .ready:
-      "Ready"
+      localized("Ready")
     case .unavailable(.noActiveDevice):
-      "No Active Test Device — run doctor on the Mac"
+      localized("No Active Test Device — run doctor on the Mac")
     case .unavailable(.sessionNotReady):
-      "Not ready — run doctor on the Mac"
+      localized("Not ready — run doctor on the Mac")
     case .unavailable(.backendUnavailable), .unavailable(.timedOut):
-      "Unavailable — run doctor on the Mac"
+      localized("Unavailable — run doctor on the Mac")
     case .unavailable:
-      "Controller reported a workflow failure"
+      localized("Controller reported a workflow failure")
     case nil:
-      "Waiting for Controller Link"
+      localized("Waiting for Controller Link")
     }
   }
 
   private var backendReadinessDescription: String {
     switch controllerLink.backendReadiness {
     case .ready:
-      "devicectl ready"
+      localized("devicectl ready")
     case .unavailable(let reason):
       controllerFailureDescription(reason)
     case nil:
       if case .connected = controllerLink.state {
-        "Checking…"
+        localized("Checking…")
       } else {
-        "Unavailable until connected"
+        localized("Unavailable until connected")
       }
     }
   }
 
   private var appliedSimulationDescription: String {
-    model.manualSession.activeAppliedRequest == nil ? "Inactive" : "Acknowledged"
+    localized(
+      model.manualSession.activeAppliedRequest == nil
+        ? "Inactive"
+        : "Acknowledged"
+    )
   }
 
   private var verifiedSimulationDescription: String {
     if case .verified = model.manualSession.status {
-      return "Verified by a fresh app observation"
+      return localized("Verified by a fresh app observation")
     }
-    return "Not verified"
+    return localized("Not verified")
   }
 
   private func manualFailureDescription(_ failure: ManualSimulationFailure) -> String {
     switch failure {
     case .responseIdentityMismatch:
-      "The response did not match this request. Nothing was marked Applied; retry after checking the controller."
+      localized(
+        "The response did not match this request. Nothing was marked Applied; retry after checking the controller."
+      )
     case .controllerUnavailable:
-      "The trusted controller became unavailable. Retry discovery without changing the Selected Location."
+      localized(
+        "The trusted controller became unavailable. Retry discovery without changing the Selected Location."
+      )
     case .requestRejected(let stableCode):
-      "The controller rejected the request (\(stableCode)). Check the backend status and retry."
+      localizedFormat(
+        "The controller rejected the request (%@). Check the backend status and retry.",
+        stableCode
+      )
     }
   }
 
   private func verificationIssueDescription(_ issue: AppliedVerificationIssue) -> String {
     switch issue {
     case .notAfterRequest:
-      "The observation is older than the current request. Wait for a fresh location update."
+      localized(
+        "The observation is older than the current request. Wait for a fresh location update."
+      )
     case .timedOut(let elapsedSeconds):
-      "No matching observation arrived within 15 seconds (\(elapsedSeconds.formatted(.number.precision(.fractionLength(2)))) s)."
+      localizedFormat(
+        "No matching observation arrived within 15 seconds (%@ s).",
+        elapsedSeconds.formatted(.number.precision(.fractionLength(2)))
+      )
     case .tooFar(let distanceMeters):
-      "The latest observation is \(distanceMeters.formatted(.number.precision(.fractionLength(2)))) m away; it must be within 25 m."
+      localizedFormat(
+        "The latest observation is %@ m away; it must be within 25 m.",
+        distanceMeters.formatted(.number.precision(.fractionLength(2)))
+      )
     }
   }
 
   private func controllerFailureDescription(_ reason: ControllerCommandFailure) -> String {
     switch reason {
     case .invalidCoordinate:
-      "Invalid coordinate"
+      localized("Invalid coordinate")
     case .noActiveDevice:
-      "No Active Test Device"
+      localized("No Active Test Device")
     case .sessionNotReady:
-      "Xcode device workflow is not ready"
+      localized("Xcode device workflow is not ready")
     case .backendUnavailable:
-      "Injection Backend is unavailable"
+      localized("Injection Backend is unavailable")
     case .timedOut:
-      "Injection Backend timed out"
+      localized("Injection Backend timed out")
     case .authenticationFailed:
-      "Controller Link authorization failed"
+      localized("Controller Link authorization failed")
     case .clearFailed:
-      "The active simulation could not be cleared"
+      localized("The active simulation could not be cleared")
     case .controllerUnavailable:
-      "Controller unavailable"
+      localized("Controller unavailable")
     case .responseIdentityMismatch:
-      "Controller response mismatch"
+      localized("Controller response mismatch")
     }
   }
 
@@ -690,9 +793,9 @@ struct ContentView: View {
 
   private func simulationDescription(_ value: Bool?) -> String {
     switch value {
-    case true: "Yes"
-    case false: "No"
-    case nil: "Unavailable"
+    case true: localized("Yes")
+    case false: localized("No")
+    case nil: localized("Unavailable")
     }
   }
 }

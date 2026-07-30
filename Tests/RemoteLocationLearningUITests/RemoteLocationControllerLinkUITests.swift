@@ -28,7 +28,7 @@ final class RemoteLocationControllerLinkUITests: XCTestCase {
       throw XCTSkip("A short-lived Mac pairing code is required for this smoke test.")
     }
 
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launch()
     app.tap()
 
@@ -55,7 +55,7 @@ final class RemoteLocationControllerLinkUITests: XCTestCase {
       throw XCTSkip("A short-lived Mac pairing code is required for this smoke test.")
     }
 
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_SEARCH_FIXTURE"] = "1"
     app.launch()
     app.tap()
@@ -107,6 +107,12 @@ final class RemoteLocationControllerLinkUITests: XCTestCase {
     pairingField.typeText(pairingCode)
     app.buttons["pair-controller"].tap()
     XCTAssertTrue(connected.waitForExistence(timeout: 20))
+  }
+
+  private func learningApp() -> XCUIApplication {
+    let app = XCUIApplication()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "en"
+    return app
   }
 
   private func connectedStatus(in app: XCUIApplication) -> XCUIElement {

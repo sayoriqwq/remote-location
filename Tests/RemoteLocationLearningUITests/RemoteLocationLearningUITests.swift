@@ -46,7 +46,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   func testLearningAppExposesPublicGateObservationSeam() {
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launch()
     app.tap()
 
@@ -75,6 +75,43 @@ final class RemoteLocationLearningUITests: XCTestCase {
     let matchStatus = app.staticTexts["match-status"]
     scrollUp(until: matchStatus, in: app)
     XCTAssertTrue(matchStatus.waitForExistence(timeout: 5))
+  }
+
+  func testLanguageToggleSwitchesImmediatelyAndPersistsTheChoice() {
+    let app = permissionFixtureApp(location: "allowed", localNetwork: "allowed")
+    app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "en"
+    app.launch()
+
+    let toggle = app.buttons["language-toggle"]
+    XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+    XCTAssertTrue(
+      waitForLabel(toggle, equalTo: "Switch to Simplified Chinese")
+    )
+    XCTAssertTrue(app.staticTexts["Mac Controller"].waitForExistence(timeout: 5))
+
+    let localNetworkStatus = app.staticTexts["local-network-permission-status"]
+    XCTAssertTrue(localNetworkStatus.waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForLabel(localNetworkStatus, endingWith: "Allowed"))
+
+    toggle.tap()
+
+    XCTAssertTrue(waitForLabel(toggle, equalTo: "切换到英文"))
+    XCTAssertTrue(app.staticTexts["Mac 模拟控制器"].waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForLabel(localNetworkStatus, endingWith: "已允许"))
+
+    app.terminate()
+    app.launchEnvironment.removeValue(forKey: "REMOTE_LOCATION_E2E_APP_LANGUAGE")
+    app.launch()
+
+    let persistedToggle = app.buttons["language-toggle"]
+    XCTAssertTrue(persistedToggle.waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForLabel(persistedToggle, equalTo: "切换到英文"))
+    XCTAssertTrue(app.staticTexts["Mac 模拟控制器"].waitForExistence(timeout: 5))
+
+    persistedToggle.tap()
+    XCTAssertTrue(
+      waitForLabel(persistedToggle, equalTo: "Switch to Simplified Chinese")
+    )
   }
 
   func testPermissionFixturesKeepDeniedAndRestrictedRecoveryDistinct() {
@@ -111,7 +148,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   func testPublicLocationSetAndReplaceAreVerifiedByLearningApp() {
-    let app = XCUIApplication()
+    let app = learningApp()
     if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
       app.resetAuthorizationStatus(for: .location)
     }
@@ -133,7 +170,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   func testMapSelectionReachesTheFreshObservationVerificationSeam() {
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
     app.launch()
     app.tap()
@@ -174,7 +211,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   func testLocationPickerKeepsMapActionsVisibleAndRequiresExplicitDismissal() {
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
     app.launch()
     app.tap()
@@ -207,7 +244,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   func testSearchResultReachesTheFreshObservationVerificationSeam() {
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_SEARCH_FIXTURE"] = "1"
     app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
     app.launch()
@@ -246,7 +283,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   func testSearchEmptyAndFailureStatesPreserveThePreviousSelection() {
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_SEARCH_FIXTURE"] = "1"
     app.launch()
     app.tap()
@@ -299,7 +336,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
       throw XCTSkip("The ten-minute backend gate is recorded only on a physical device.")
     }
 
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launch()
     app.tap()
     defer { XCUIDevice.shared.location = nil }
@@ -500,10 +537,40 @@ final class RemoteLocationLearningUITests: XCTestCase {
     location: String,
     localNetwork: String
   ) -> XCUIApplication {
-    let app = XCUIApplication()
+    let app = learningApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_LOCATION_PERMISSION"] = location
     app.launchEnvironment["REMOTE_LOCATION_E2E_LOCAL_NETWORK_PERMISSION"] = localNetwork
     return app
+  }
+
+  private func learningApp() -> XCUIApplication {
+    let app = XCUIApplication()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "en"
+    return app
+  }
+
+  private func waitForLabel(
+    _ element: XCUIElement,
+    equalTo expectedLabel: String,
+    timeout: TimeInterval = 5
+  ) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "label == %@", expectedLabel),
+      object: element
+    )
+    return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+  }
+
+  private func waitForLabel(
+    _ element: XCUIElement,
+    endingWith expectedSuffix: String,
+    timeout: TimeInterval = 5
+  ) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "label ENDSWITH %@", expectedSuffix),
+      object: element
+    )
+    return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
   }
 
   private func scrollUp(until element: XCUIElement, in app: XCUIApplication) {

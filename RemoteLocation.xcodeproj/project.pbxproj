@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0141CFE02E6DCC49FE26DC35 /* BaselineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2946B4BB60FF2EB9EE86F9C0 /* BaselineViewModel.swift */; };
 		0424120E78793B82A9C0EEFC /* TLSControllerServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF94DD13B7AE6AC2A17959A0 /* TLSControllerServer.swift */; };
+		0860134A04D283931ACEC1EA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E852213CC84B0F2669B6561 /* Assets.xcassets */; };
 		0A31B5075461853BDC513685 /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */; };
 		169123AF82F73EDCE1764F36 /* ControllerCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFACA599FE341A79901ABFD2 /* ControllerCommand.swift */; };
 		170FE9E57A66954667B8B70A /* TrustedControllerLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A510E5270754E988E724FF /* TrustedControllerLink.swift */; };
@@ -19,7 +20,7 @@
 		5B628C6FFED5ED7D9D02C2DD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */; };
 		5DC62CDA96B694F6627A452C /* Pairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E9B5F7C500D71F989B5E56 /* Pairing.swift */; };
 		7B9E245DAE2A540E53D4AB82 /* ManualSimulationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */; };
-		8F11A2B3C4D5E6F701234567 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A21B3C4D5E6F70123456789 /* Assets.xcassets */; };
+		86CE37803A3E141431AAE412 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8BD8BE733CD1A04C9F08C354 /* InfoPlist.strings */; };
 		91DF5D1DB1E4E7402B47AD52 /* ControllerLinkState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC4365BC86EB9D3D4AB863 /* ControllerLinkState.swift */; };
 		A486C38F99D371F613F6AF96 /* ControllerAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5C50FBB1259E83FEE3E985 /* ControllerAuthorization.swift */; };
 		AAB946F25198A1BE77307C2F /* LocationObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A563353D69C294888044F5 /* LocationObserver.swift */; };
@@ -27,6 +28,7 @@
 		AFDABC47C65E35DB76440064 /* BonjourControllerDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D01ADB65B3135833CB6B1EC /* BonjourControllerDiscovery.swift */; };
 		B5DA7DFDC30CE2A3FC82AE08 /* LocationSelectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70085091723FA515C299CE6 /* LocationSelectionState.swift */; };
 		CA7940E553250C41E4C9DD7E /* LocationDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */; };
+		D21A656437608A901C7E3359 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8B7FDC8186DDB1CE4AD254C3 /* Localizable.strings */; };
 		D52611A0DC8B95B20174F71F /* ControllerTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD5DF52927D1D5FE89694F1 /* ControllerTrust.swift */; };
 		DBA9472FBD63FC421A22C6F3 /* NetworkControllerLinkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 243B501AE445B272F30524A7 /* NetworkControllerLinkTransport.swift */; };
 		E2634B64C10D7ACEE42B38D6 /* LocationPickerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */; };
@@ -54,6 +56,7 @@
 		43265D14CD58BCCB317F4B97 /* ControllerIdentitySecurity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerIdentitySecurity.swift; sourceTree = "<group>"; };
 		492552E0E66D6D7BD046B2EF /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		4A85DD686C84AD18BD24E5A3 /* ControllerServerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerServerSession.swift; sourceTree = "<group>"; };
+		4E852213CC84B0F2669B6561 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualSimulationSession.swift; sourceTree = "<group>"; };
 		588F6D628E098CA7C9DBB436 /* RemoteLocationLearningUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RemoteLocationLearningUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5D01ADB65B3135833CB6B1EC /* BonjourControllerDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourControllerDiscovery.swift; sourceTree = "<group>"; };
@@ -61,14 +64,16 @@
 		6FD5DF52927D1D5FE89694F1 /* ControllerTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerTrust.swift; sourceTree = "<group>"; };
 		81A563353D69C294888044F5 /* LocationObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationObserver.swift; sourceTree = "<group>"; };
 		85E9B5F7C500D71F989B5E56 /* Pairing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pairing.swift; sourceTree = "<group>"; };
+		8BD8BE733CD1A04C9F08C354 /* InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = InfoPlist.strings; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationDomain.swift; sourceTree = "<group>"; };
-		9A21B3C4D5E6F70123456789 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		97E1639C289985F459B054A4 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerViewModel.swift; sourceTree = "<group>"; };
 		C05D2783175B6663C53E3079 /* RemoteLocationLearning.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RemoteLocationLearning.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1A510E5270754E988E724FF /* TrustedControllerLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustedControllerLink.swift; sourceTree = "<group>"; };
 		C70085091723FA515C299CE6 /* LocationSelectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSelectionState.swift; sourceTree = "<group>"; };
 		CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerLinkViewModel.swift; sourceTree = "<group>"; };
+		ECC21F0D2D4600F40A328F3E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EFACA599FE341A79901ABFD2 /* ControllerCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerCommand.swift; sourceTree = "<group>"; };
 		F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteLocationLearningApp.swift; sourceTree = "<group>"; };
 		FF94DD13B7AE6AC2A17959A0 /* TLSControllerServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TLSControllerServer.swift; sourceTree = "<group>"; };
@@ -130,10 +135,12 @@
 		8AD324DCCC3B11349898A06D /* App */ = {
 			isa = PBXGroup;
 			children = (
-				9A21B3C4D5E6F70123456789 /* Assets.xcassets */,
+				4E852213CC84B0F2669B6561 /* Assets.xcassets */,
 				2946B4BB60FF2EB9EE86F9C0 /* BaselineViewModel.swift */,
 				CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */,
 				DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */,
+				8BD8BE733CD1A04C9F08C354 /* InfoPlist.strings */,
+				8B7FDC8186DDB1CE4AD254C3 /* Localizable.strings */,
 				81A563353D69C294888044F5 /* LocationObserver.swift */,
 				684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */,
 				9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */,
@@ -207,7 +214,7 @@
 			buildConfigurationList = 504176E5EA48A29FAE595603 /* Build configuration list for PBXNativeTarget "RemoteLocationLearning" */;
 			buildPhases = (
 				E4EAF5BA6468A410165E8F7F /* Sources */,
-				A1B2C3D4E5F60718293A4B5C /* Resources */,
+				B3375E104031783EC8992D4E /* Resources */,
 			);
 			buildRules = (
 			);
@@ -245,6 +252,7 @@
 			knownRegions = (
 				Base,
 				en,
+				"zh-Hans",
 			);
 			mainGroup = AB0D9B068CA8919C7795A0E8;
 			minimizedProjectReferenceProxies = 1;
@@ -259,11 +267,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A1B2C3D4E5F60718293A4B5C /* Resources */ = {
+		B3375E104031783EC8992D4E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8F11A2B3C4D5E6F701234567 /* Assets.xcassets in Resources */,
+				0860134A04D283931ACEC1EA /* Assets.xcassets in Resources */,
+				86CE37803A3E141431AAE412 /* InfoPlist.strings in Resources */,
+				D21A656437608A901C7E3359 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +326,18 @@
 			targetProxy = E50B6607BE4007DEDA56C21D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		8B7FDC8186DDB1CE4AD254C3 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				ECC21F0D2D4600F40A328F3E /* en */,
+				97E1639C289985F459B054A4 /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		19FAF89582E0CEF7B4608B68 /* Debug */ = {

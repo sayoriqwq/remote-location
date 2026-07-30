@@ -1,0 +1,6 @@
+/*
+ English is the source language. These entries make it an explicit bundle
+ localization so locale-specific lookups never fall through to zh-Hans.
+ */
+"Switch to Simplified Chinese" = "Switch to Simplified Chinese";
+"Switch to English" = "Switch to English";

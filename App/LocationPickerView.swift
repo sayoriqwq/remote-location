@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 struct LocationPickerView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.locale) private var locale
   @StateObject private var searchModel: LocationPickerViewModel
   @State private var cameraPosition: MapCameraPosition
   @State private var mapCenter: CLLocationCoordinate2D
@@ -197,17 +198,21 @@ struct LocationPickerView: View {
     case .results(let results):
       ForEach(results) { result in
         Button {
+          let resultName = localized(result.name)
           commit(
             result.location,
             source: .search,
-            confirmation: "\(result.name) is now the Selected Location."
+            confirmation: localizedFormat(
+              "%@ is now the Selected Location.",
+              resultName
+            )
           )
         } label: {
           VStack(alignment: .leading, spacing: 2) {
-            Text(result.name)
+            Text(localized(result.name))
               .foregroundStyle(.primary)
             if let detail = result.detail {
-              Text(detail)
+              Text(localized(detail))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             }
@@ -221,6 +226,18 @@ struct LocationPickerView: View {
     }
   }
 
+  private func localized(_ key: String) -> String {
+    AppLocalization.string(key, locale: locale)
+  }
+
+  private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    String(
+      format: localized(key),
+      locale: locale,
+      arguments: arguments
+    )
+  }
+
   private func commit(
     _ location: SelectedLocation,
     source: LocationSelectionSource,
@@ -231,7 +248,9 @@ struct LocationPickerView: View {
       selectionFailure = nil
     } else {
       selectionConfirmation = nil
-      selectionFailure = "Finish the current apply or stop request before changing the selection."
+      selectionFailure = localized(
+        "Finish the current apply or stop request before changing the selection."
+      )
     }
   }
 
@@ -245,7 +264,7 @@ struct LocationPickerView: View {
     commit(
       location,
       source: .map,
-      confirmation: "Map center is now the Selected Location."
+      confirmation: localized("Map center is now the Selected Location.")
     )
   }
 }
