@@ -19,6 +19,7 @@
 		5B628C6FFED5ED7D9D02C2DD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */; };
 		5DC62CDA96B694F6627A452C /* Pairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E9B5F7C500D71F989B5E56 /* Pairing.swift */; };
 		7B9E245DAE2A540E53D4AB82 /* ManualSimulationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */; };
+		8F11A2B3C4D5E6F701234567 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A21B3C4D5E6F70123456789 /* Assets.xcassets */; };
 		91DF5D1DB1E4E7402B47AD52 /* ControllerLinkState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC4365BC86EB9D3D4AB863 /* ControllerLinkState.swift */; };
 		A486C38F99D371F613F6AF96 /* ControllerAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5C50FBB1259E83FEE3E985 /* ControllerAuthorization.swift */; };
 		AAB946F25198A1BE77307C2F /* LocationObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A563353D69C294888044F5 /* LocationObserver.swift */; };
@@ -61,6 +62,7 @@
 		81A563353D69C294888044F5 /* LocationObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationObserver.swift; sourceTree = "<group>"; };
 		85E9B5F7C500D71F989B5E56 /* Pairing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pairing.swift; sourceTree = "<group>"; };
 		95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationDomain.swift; sourceTree = "<group>"; };
+		9A21B3C4D5E6F70123456789 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerViewModel.swift; sourceTree = "<group>"; };
 		C05D2783175B6663C53E3079 /* RemoteLocationLearning.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RemoteLocationLearning.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1A510E5270754E988E724FF /* TrustedControllerLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustedControllerLink.swift; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 		8AD324DCCC3B11349898A06D /* App */ = {
 			isa = PBXGroup;
 			children = (
+				9A21B3C4D5E6F70123456789 /* Assets.xcassets */,
 				2946B4BB60FF2EB9EE86F9C0 /* BaselineViewModel.swift */,
 				CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */,
 				DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */,
@@ -204,6 +207,7 @@
 			buildConfigurationList = 504176E5EA48A29FAE595603 /* Build configuration list for PBXNativeTarget "RemoteLocationLearning" */;
 			buildPhases = (
 				E4EAF5BA6468A410165E8F7F /* Sources */,
+				A1B2C3D4E5F60718293A4B5C /* Resources */,
 			);
 			buildRules = (
 			);
@@ -253,6 +257,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1B2C3D4E5F60718293A4B5C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F11A2B3C4D5E6F701234567 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AB5F5BECC0F0C4B4B22CD826 /* Sources */ = {
@@ -391,7 +406,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 492552E0E66D6D7BD046B2EF /* Signing.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -413,7 +428,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 492552E0E66D6D7BD046B2EF /* Signing.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

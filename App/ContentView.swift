@@ -1,4 +1,5 @@
 import CoreLocation
+import Foundation
 import SwiftUI
 
 struct ContentView: View {
@@ -18,7 +19,26 @@ struct ContentView: View {
         baselineSection
         limitationsSection
       }
-      .navigationTitle("Location Learning")
+      .navigationTitle(appDisplayName)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .principal) {
+          HStack(spacing: 8) {
+            Image("BrandMark")
+              .resizable()
+              .scaledToFit()
+              .frame(width: 28, height: 28)
+              .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+              .accessibilityHidden(true)
+
+            Text(appDisplayName)
+              .font(.headline)
+          }
+          .accessibilityElement(children: .combine)
+          .accessibilityLabel("\(appDisplayName), trusted iOS location simulation")
+          .accessibilityIdentifier("brand-header")
+        }
+      }
     }
     .task {
       if locationPermissionFixture == nil {
@@ -36,6 +56,11 @@ struct ContentView: View {
         model.select(location, source: source)
       }
     }
+  }
+
+  private var appDisplayName: String {
+    Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+      ?? "Pinshift"
   }
 
   private var controllerLinkSection: some View {

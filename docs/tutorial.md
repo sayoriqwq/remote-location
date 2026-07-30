@@ -1,4 +1,4 @@
-# Remote Location first-round tutorial
+# Pinshift first-round tutorial
 
 This tutorial covers the current personal environment only. The production Injection Backend is Xcode 27's public `devicectl device simulate location` workflow; there is no production test runner or second backend.
 
@@ -32,7 +32,7 @@ When exactly one paired physical iPhone is known to Xcode, these commands select
 2. Connect and unlock the iPhone. Confirm **Trust** on both devices if prompted.
 3. Enable **Developer Mode** in **Settings → Privacy & Security**, restart if prompted, and confirm it after restart.
 4. Open the app project in Xcode and select automatic signing for an available development team. A Personal Team build can require rebuilding and reprovisioning every seven days.
-5. Build, install, and launch **Remote Location Learning** on the iPhone.
+5. Build, install, and launch **Pinshift** on the iPhone.
 
 Keep the Active Test Device selector private. Supply it with `--device` or the `REMOTE_LOCATION_DEVICE` environment variable. Supply the approved full-Xcode developer directory with `--developer-directory` or `REMOTE_LOCATION_DEVELOPER_DIR`; this project does not require changing the global `xcode-select` value.
 

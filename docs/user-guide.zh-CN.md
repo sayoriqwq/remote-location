@@ -1,4 +1,4 @@
-# Remote Location 使用说明
+# Pinshift 使用说明
 
 这份说明面向当前这台 Mac 和已配对的 iPhone。日常使用不需要重新编译控制器、输入
 Keychain 密码或重复输入六位配对码。
@@ -13,7 +13,7 @@ Keychain 密码或重复输入六位配对码。
    rl-start
    ```
 
-3. 保持这个终端窗口运行，打开 iPhone 上的 **Remote Location Learning**。
+3. 保持这个终端窗口运行，打开 iPhone 上的 **Pinshift**。
 4. 等待 App 顶部四项状态就绪：
 
    - `Local Network Permission`：`Allowed`
@@ -89,4 +89,3 @@ rl-doctor
 | `rl-reset` | 清除可能仍在生效的模拟位置 |
 | `rl-doctor` | 只读检查 Xcode、iPhone、签名和控制器状态 |
 | `rl-install` | 首次安装或源码变化后更新稳定签名控制器 |
-

@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/assets/brand/remote-location-mark.png" alt="Remote Location geometric mark" width="180">
+  <img src="docs/assets/brand/remote-location-mark.png" alt="Pinshift geometric mark" width="180">
 </p>
 
-<h1 align="center">Remote Location</h1>
+<h1 align="center">Pinshift</h1>
 
 <p align="center">
-  在当前个人开发环境中，通过 Mac 上的可信控制器为已连接的 iPhone 设置静态测试位置。
+  可信的 iOS 测试位置模拟工具：通过 Mac 控制器，为已连接的 iPhone 设置静态测试位置。
 </p>
 
 ## 使用入口
