@@ -65,6 +65,9 @@ struct ContentView: View {
       }
     }
     .task {
+      if let selectedLocationFixture {
+        _ = model.select(selectedLocationFixture, source: .manual)
+      }
       if let languageFixture {
         language = languageFixture
       }
@@ -670,6 +673,28 @@ struct ContentView: View {
         return nil
       }
       return AppLanguage(rawValue: value)
+    #else
+      nil
+    #endif
+  }
+
+  private var selectedLocationFixture: SelectedLocation? {
+    #if DEBUG
+      guard
+        let value = ProcessInfo.processInfo.environment[
+          "REMOTE_LOCATION_E2E_SELECTED_LOCATION"
+        ]
+      else {
+        return nil
+      }
+      let components = value.split(separator: ",", maxSplits: 1)
+      guard components.count == 2 else {
+        return nil
+      }
+      return try? SelectedLocation(
+        latitude: Double(components[0]) ?? .nan,
+        longitude: Double(components[1]) ?? .nan
+      )
     #else
       nil
     #endif

@@ -9,12 +9,19 @@ struct LocationPickerView: View {
   @StateObject private var searchModel: LocationPickerViewModel
   @State private var cameraPosition: MapCameraPosition
   @State private var mapCenter: CLLocationCoordinate2D
+  @State private var adjustmentOrigin: SelectedLocation?
+  @State private var displacementMeters: Double?
+  @State private var mapVisibleRangeMeters: Double?
   @State private var selectionConfirmation: String?
+  @State private var restorationConfirmation: String?
   @State private var selectionFailure: String?
+  @State private var hasCommittedSelection = false
   @FocusState private var searchFieldFocused: Bool
 
   let selected: SelectedLocation?
   let onSelect: (SelectedLocation, LocationSelectionSource) -> Bool
+
+  private static let fineAdjustmentRangeMeters = 500.0
 
   init(
     selected: SelectedLocation?,
@@ -28,12 +35,25 @@ struct LocationPickerView: View {
       longitude: selected?.longitude ?? 121.4737
     )
     _mapCenter = State(initialValue: center)
+    _adjustmentOrigin = State(initialValue: selected)
+    _displacementMeters = State(
+      initialValue: selected == nil ? nil : 0
+    )
+    _mapVisibleRangeMeters = State(
+      initialValue: selected == nil ? nil : Self.fineAdjustmentRangeMeters
+    )
     _cameraPosition = State(
       initialValue: .region(
-        MKCoordinateRegion(
-          center: center,
-          span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
-        )
+        selected == nil
+          ? MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
+          )
+          : MKCoordinateRegion(
+            center: center,
+            latitudinalMeters: Self.fineAdjustmentRangeMeters,
+            longitudinalMeters: Self.fineAdjustmentRangeMeters
+          )
       )
     )
 
@@ -77,6 +97,11 @@ struct LocationPickerView: View {
               .foregroundStyle(.red)
               .accessibilityIdentifier("location-selection-failure")
           }
+          if let restorationConfirmation {
+            Label(restorationConfirmation, systemImage: "arrow.uturn.backward.circle.fill")
+              .foregroundStyle(.blue)
+              .accessibilityIdentifier("location-restoration-confirmation")
+          }
         }
         .padding()
       }
@@ -97,27 +122,27 @@ struct LocationPickerView: View {
   private var mapSection: some View {
     GroupBox("Map") {
       VStack(alignment: .leading, spacing: 12) {
-        ZStack {
+        ZStack(alignment: .bottomTrailing) {
           Map(position: $cameraPosition) {
-            if let selected {
+            if let markerLocation = adjustmentOrigin ?? selected {
               Marker(
                 "Selected",
                 coordinate: CLLocationCoordinate2D(
-                  latitude: selected.latitude,
-                  longitude: selected.longitude
+                  latitude: markerLocation.latitude,
+                  longitude: markerLocation.longitude
                 )
               )
             }
           }
           .onMapCameraChange(frequency: .onEnd) { context in
-            mapCenter = context.region.center
+            updateMapFeedback(for: context.region)
           }
           .accessibilityIdentifier("location-map")
 
           Button {
             selectMapCenter()
           } label: {
-            Image(systemName: "plus")
+            Image(systemName: "scope")
               .font(.title2.weight(.semibold))
               .foregroundStyle(.blue)
               .frame(minWidth: 44, minHeight: 44)
@@ -125,7 +150,9 @@ struct LocationPickerView: View {
           }
           .buttonStyle(.plain)
           .accessibilityLabel("Use Map Center as Selected Location")
+          .accessibilityHint("Commits the map center without applying a simulation.")
           .accessibilityIdentifier("use-map-center")
+          .padding(12)
           .zIndex(1)
         }
         .frame(height: 300)
@@ -138,6 +165,26 @@ struct LocationPickerView: View {
           )
           .font(.footnote.monospacedDigit())
           .accessibilityIdentifier("map-center-coordinate")
+        }
+
+        if adjustmentOrigin != nil {
+          LabeledContent("Displacement from opening location") {
+            Text(formattedDisplacement)
+              .font(.footnote.monospacedDigit())
+              .accessibilityIdentifier("fine-adjustment-displacement")
+          }
+
+          LabeledContent("Map visible range") {
+            Text(formattedMapVisibleRange)
+              .font(.footnote.monospacedDigit())
+              .accessibilityIdentifier("map-visible-range")
+          }
+
+          Button("Restore Opening Location") {
+            restoreOpeningLocation()
+          }
+          .frame(minHeight: 44)
+          .accessibilityIdentifier("restore-opening-location")
         }
 
       }
@@ -238,16 +285,51 @@ struct LocationPickerView: View {
     )
   }
 
+  private var formattedDisplacement: String {
+    guard let displacementMeters else {
+      return localized("Unavailable")
+    }
+    return formattedDistance(displacementMeters)
+  }
+
+  private var formattedMapVisibleRange: String {
+    guard let mapVisibleRangeMeters else {
+      return localized("Broad default view")
+    }
+    return localizedFormat(
+      mapVisibleRangeMeters >= 1_000 ? "About %@ km" : "About %@ m",
+      mapVisibleRangeMeters >= 1_000
+        ? (mapVisibleRangeMeters / 1_000).formatted(.number.precision(.fractionLength(1)))
+        : mapVisibleRangeMeters.formatted(.number.precision(.fractionLength(0)))
+    )
+  }
+
+  private func formattedDistance(_ meters: Double) -> String {
+    if meters >= 1_000 {
+      return localizedFormat(
+        "%@ km",
+        (meters / 1_000).formatted(.number.precision(.fractionLength(1)))
+      )
+    }
+    return localizedFormat(
+      "%@ m",
+      meters.formatted(.number.precision(.fractionLength(0)))
+    )
+  }
+
   private func commit(
     _ location: SelectedLocation,
     source: LocationSelectionSource,
     confirmation: String
   ) {
     if onSelect(location, source) {
+      hasCommittedSelection = true
       selectionConfirmation = confirmation
+      restorationConfirmation = nil
       selectionFailure = nil
     } else {
       selectionConfirmation = nil
+      restorationConfirmation = nil
       selectionFailure = localized(
         "Finish the current apply or stop request before changing the selection."
       )
@@ -266,5 +348,128 @@ struct LocationPickerView: View {
       source: .map,
       confirmation: localized("Map center is now the Selected Location.")
     )
+  }
+
+  private func restoreOpeningLocation() {
+    guard let adjustmentOrigin else { return }
+
+    mapCenter = coordinate(for: adjustmentOrigin)
+    displacementMeters = 0
+    mapVisibleRangeMeters = Self.fineAdjustmentRangeMeters
+    cameraPosition = .region(Self.fineAdjustmentRegion(for: adjustmentOrigin))
+
+    guard hasCommittedSelection else {
+      restorationConfirmation = localized("Map restored to the opening location.")
+      selectionConfirmation = nil
+      selectionFailure = nil
+      return
+    }
+
+    if onSelect(adjustmentOrigin, .map) {
+      hasCommittedSelection = false
+      selectionConfirmation = nil
+      restorationConfirmation = localized(
+        "Opening location restored as the Selected Location."
+      )
+      selectionFailure = nil
+    } else {
+      selectionConfirmation = nil
+      restorationConfirmation = nil
+      selectionFailure = localized(
+        "Finish the current apply or stop request before changing the selection."
+      )
+    }
+  }
+
+  private func updateMapFeedback(for region: MKCoordinateRegion) {
+    mapCenter = region.center
+
+    guard
+      let proposed = try? SelectedLocation(
+        latitude: region.center.latitude,
+        longitude: region.center.longitude
+      )
+    else {
+      return
+    }
+
+    if let adjustmentOrigin {
+      displacementMeters = LocationDistance.meters(
+        from: adjustmentOrigin,
+        to: proposed
+      )
+      mapVisibleRangeMeters = visibleRangeMeters(for: region)
+    }
+  }
+
+  private func visibleRangeMeters(for region: MKCoordinateRegion) -> Double? {
+    guard
+      let center = try? SelectedLocation(
+        latitude: region.center.latitude,
+        longitude: region.center.longitude
+      ),
+      region.span.latitudeDelta.isFinite,
+      region.span.longitudeDelta.isFinite
+    else {
+      return nil
+    }
+
+    let halfLatitudeDelta = abs(region.span.latitudeDelta) / 2
+    let halfLongitudeDelta = abs(region.span.longitudeDelta) / 2
+    let northLatitude = min(90, center.latitude + halfLatitudeDelta)
+    let eastLongitude = normalizedLongitude(center.longitude + halfLongitudeDelta)
+
+    guard
+      let north = try? SelectedLocation(
+        latitude: northLatitude,
+        longitude: center.longitude
+      ),
+      let east = try? SelectedLocation(
+        latitude: center.latitude,
+        longitude: eastLongitude
+      )
+    else {
+      return nil
+    }
+
+    return max(
+      LocationDistance.meters(from: center, to: north),
+      LocationDistance.meters(from: center, to: east)
+    ) * 2
+  }
+
+  private func normalizedLongitude(_ longitude: Double) -> Double {
+    var normalized = longitude.truncatingRemainder(dividingBy: 360)
+    if normalized > 180 {
+      normalized -= 360
+    } else if normalized < -180 {
+      normalized += 360
+    }
+    return normalized
+  }
+
+  private static func fineAdjustmentRegion(
+    for location: SelectedLocation
+  ) -> MKCoordinateRegion {
+    MKCoordinateRegion(
+      center: coordinate(for: location),
+      latitudinalMeters: fineAdjustmentRangeMeters,
+      longitudinalMeters: fineAdjustmentRangeMeters
+    )
+  }
+
+  private static func coordinate(
+    for location: SelectedLocation
+  ) -> CLLocationCoordinate2D {
+    CLLocationCoordinate2D(
+      latitude: location.latitude,
+      longitude: location.longitude
+    )
+  }
+
+  private func coordinate(
+    for location: SelectedLocation
+  ) -> CLLocationCoordinate2D {
+    Self.coordinate(for: location)
   }
 }

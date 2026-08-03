@@ -1,4 +1,5 @@
 import CoreLocation
+import Foundation
 import XCTest
 
 @MainActor
@@ -227,6 +228,8 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertTrue(map.waitForExistence(timeout: 5))
     XCTAssertTrue(selectMapCenter.waitForExistence(timeout: 5))
     XCTAssertTrue(done.waitForExistence(timeout: 5))
+    XCTAssertFalse(app.staticTexts["map-visible-range"].exists)
+    XCTAssertFalse(app.buttons["restore-opening-location"].exists)
     XCTAssertTrue(selectMapCenter.isHittable)
     XCTAssertTrue(done.isHittable)
     XCTAssertGreaterThanOrEqual(selectMapCenter.frame.width, 44)
@@ -241,6 +244,182 @@ final class RemoteLocationLearningUITests: XCTestCase {
     )
     done.tap()
     XCTAssertFalse(picker.waitForExistence(timeout: 2))
+  }
+
+  func testFineAdjustmentOpensAroundSelectedLocationWithOriginFeedback() {
+    let app = selectedLocationFixtureApp()
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+
+    let mapCenter = app.staticTexts["map-center-coordinate"]
+    let displacement = app.staticTexts["fine-adjustment-displacement"]
+    let visibleRange = app.staticTexts["map-visible-range"]
+    let restore = app.buttons["restore-opening-location"]
+
+    XCTAssertTrue(mapCenter.waitForExistence(timeout: 5))
+    XCTAssertTrue(mapCenter.label.contains("31.230400"))
+    XCTAssertTrue(mapCenter.label.contains("121.473700"))
+    XCTAssertTrue(displacement.waitForExistence(timeout: 5))
+    XCTAssertTrue(displacement.label.contains("0"))
+    XCTAssertTrue(visibleRange.waitForExistence(timeout: 5))
+    XCTAssertTrue(visibleRange.label.contains("500"))
+    XCTAssertTrue(restore.waitForExistence(timeout: 5))
+    XCTAssertTrue(restore.isHittable)
+  }
+
+  func testFineAdjustmentPinchInShrinksVisibleRangeWithoutCommittingSelection() {
+    let app = selectedLocationFixtureApp()
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+
+    let map = app.otherElements["location-map"]
+    let visibleRange = app.staticTexts["map-visible-range"]
+    XCTAssertTrue(map.waitForExistence(timeout: 5))
+    XCTAssertTrue(map.isHittable)
+    XCTAssertTrue(visibleRange.waitForExistence(timeout: 5))
+    guard let openingRange = distanceMeters(from: visibleRange.label) else {
+      return XCTFail("The initial visible map range was not accessible.")
+    }
+    map.pinch(withScale: 2.0, velocity: 1.0)
+    let zoomedInRange = waitForVisibleRange(visibleRange) { current in
+      return current < openingRange * 0.9
+    }
+
+    XCTAssertLessThan(zoomedInRange, openingRange * 0.9)
+    assertFineAdjustmentMapRemainsInteractive(in: app)
+    closeFineAdjustmentAndAssertSelectionWasNotApplied(in: app)
+  }
+
+  func testFineAdjustmentPinchOutExpandsVisibleRangeWithoutCommittingSelection() {
+    let app = selectedLocationFixtureApp()
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+
+    let map = app.otherElements["location-map"]
+    let visibleRange = app.staticTexts["map-visible-range"]
+    XCTAssertTrue(map.waitForExistence(timeout: 5))
+    XCTAssertTrue(map.isHittable)
+    XCTAssertTrue(visibleRange.waitForExistence(timeout: 5))
+    guard let openingRange = distanceMeters(from: visibleRange.label) else {
+      return XCTFail("The initial visible map range was not accessible.")
+    }
+    map.pinch(withScale: 0.5, velocity: -1.0)
+    let zoomedOutRange = waitForVisibleRange(visibleRange) { current in
+      return current > openingRange * 1.1
+    }
+
+    XCTAssertGreaterThan(zoomedOutRange, openingRange * 1.1)
+    assertFineAdjustmentMapRemainsInteractive(in: app)
+    closeFineAdjustmentAndAssertSelectionWasNotApplied(in: app)
+  }
+
+  func testFineAdjustmentPanLeavesSelectedLocationUnchangedUntilMapCenterCommit() {
+    let app = selectedLocationFixtureApp()
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+    panMapAndWaitForDisplacement(in: app)
+    app.buttons["close-location-picker"].tap()
+
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectedLatitude.label.hasSuffix("31.230400"))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectedLongitude.label.hasSuffix("121.473700"))
+
+    openLocationPicker(in: app)
+    panMapAndWaitForDisplacement(in: app)
+    app.buttons["use-map-center"].tap()
+    waitForSelectionConfirmation(in: app)
+    app.buttons["close-location-picker"].tap()
+
+    scrollToTop(in: app)
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertFalse(selectedLongitude.label.hasSuffix("121.473700"))
+  }
+
+  func testFineAdjustmentRestoreReplacesACommittedCenterWithTheOpeningLocation() {
+    let app = selectedLocationFixtureApp()
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+    panMapAndWaitForDisplacement(in: app)
+    app.buttons["use-map-center"].tap()
+    waitForSelectionConfirmation(in: app)
+    scrollPickerToTop(in: app)
+    app.buttons["restore-opening-location"].tap()
+
+    let restoreConfirmation = app.staticTexts["location-restoration-confirmation"]
+    XCTAssertTrue(restoreConfirmation.waitForExistence(timeout: 5))
+    app.buttons["close-location-picker"].tap()
+
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectedLatitude.label.hasSuffix("31.230400"))
+    XCTAssertTrue(selectedLongitude.label.hasSuffix("121.473700"))
+  }
+
+  func testFineAdjustmentDoesNotReplaceAnAppliedSimulationUntilExplicitStop() {
+    let app = selectedLocationFixtureApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+
+    let apply = app.buttons["apply-selected-location"]
+    scrollUp(until: apply, in: app)
+    XCTAssertTrue(apply.waitForExistence(timeout: 5))
+    apply.tap()
+    XCTAssertTrue(
+      app.staticTexts["applied-acknowledgement"].waitForExistence(timeout: 5)
+    )
+
+    openLocationPicker(in: app)
+    panMapAndWaitForDisplacement(in: app)
+    app.buttons["use-map-center"].tap()
+    waitForSelectionConfirmation(in: app)
+    app.buttons["close-location-picker"].tap()
+
+    let acknowledgement = app.staticTexts["applied-acknowledgement"]
+    XCTAssertTrue(acknowledgement.waitForExistence(timeout: 5))
+    let stop = app.buttons["stop-simulation"]
+    scrollUp(until: stop, in: app)
+    XCTAssertTrue(stop.waitForExistence(timeout: 5))
+    XCTAssertTrue(stop.isEnabled)
+  }
+
+  func testFineAdjustmentFeedbackIsLocalizedInSimplifiedChinese() {
+    let app = selectedLocationFixtureApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "zh-Hans"
+    app.launch()
+    app.tap()
+
+    openLocationPicker(in: app)
+
+    let displacement = app.staticTexts["fine-adjustment-displacement"]
+    XCTAssertTrue(displacement.waitForExistence(timeout: 5))
+    XCTAssertTrue(displacement.label.contains("米"))
+    XCTAssertEqual(
+      app.buttons["restore-opening-location"].label,
+      "恢复打开时位置"
+    )
   }
 
   func testSearchResultReachesTheFreshObservationVerificationSeam() {
@@ -525,12 +704,105 @@ final class RemoteLocationLearningUITests: XCTestCase {
     button.tap()
   }
 
+  private func panMapAndWaitForDisplacement(in app: XCUIApplication) {
+    let map = app.otherElements["location-map"]
+    XCTAssertTrue(map.waitForExistence(timeout: 5))
+    map.swipeLeft()
+
+    let displacement = app.staticTexts["fine-adjustment-displacement"]
+    let startedAt = Date()
+    while Date().timeIntervalSince(startedAt) < 5 {
+      if let meters = distanceMeters(from: displacement.label), meters > 1 {
+        return
+      }
+      RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+    XCTFail("The map displacement did not exceed 1 m.")
+  }
+
+  private func assertFineAdjustmentMapRemainsInteractive(in app: XCUIApplication) {
+    let map = app.otherElements["location-map"]
+    let useMapCenter = app.buttons["use-map-center"]
+    let done = app.buttons["close-location-picker"]
+
+    XCTAssertTrue(map.exists)
+    XCTAssertTrue(map.isHittable)
+    XCTAssertTrue(useMapCenter.exists)
+    XCTAssertTrue(useMapCenter.isHittable)
+    XCTAssertTrue(done.exists)
+    XCTAssertTrue(done.isHittable)
+  }
+
+  private func closeFineAdjustmentAndAssertSelectionWasNotApplied(
+    in app: XCUIApplication
+  ) {
+    app.buttons["close-location-picker"].tap()
+
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    scrollToTop(in: app)
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    scrollUp(until: selectedLongitude, in: app)
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectedLatitude.label.hasSuffix("31.230400"))
+    XCTAssertTrue(selectedLongitude.label.hasSuffix("121.473700"))
+
+    let selectedStatus = app.staticTexts.matching(identifier: "simulation-status")
+      .matching(NSPredicate(format: "label == %@", "Selected — waiting to apply"))
+      .firstMatch
+    scrollUp(until: selectedStatus, in: app)
+    XCTAssertTrue(selectedStatus.waitForExistence(timeout: 5))
+    XCTAssertFalse(app.staticTexts["applied-acknowledgement"].exists)
+  }
+
+  private func waitForVisibleRange(
+    _ element: XCUIElement,
+    satisfying predicate: (Double) -> Bool,
+    timeout: TimeInterval = 5
+  ) -> Double {
+    let startedAt = Date()
+    while Date().timeIntervalSince(startedAt) < timeout {
+      if let value = distanceMeters(from: element.label), predicate(value) {
+        return value
+      }
+      RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    }
+
+    XCTFail("The visible map range did not reach the expected pinch direction.")
+    return distanceMeters(from: element.label) ?? .nan
+  }
+
+  private func distanceMeters(from label: String) -> Double? {
+    let regex = try! NSRegularExpression(
+      pattern: #"([0-9]+(?:\.[0-9]+)?)\s*(km|m)"#
+    )
+    let fullRange = NSRange(label.startIndex..<label.endIndex, in: label)
+    guard
+      let match = regex.firstMatch(in: label, range: fullRange),
+      let valueRange = Range(match.range(at: 1), in: label),
+      let unitRange = Range(match.range(at: 2), in: label),
+      let value = Double(label[valueRange])
+    else {
+      return nil
+    }
+
+    return value * (label[unitRange] == "km" ? 1_000 : 1)
+  }
+
   private func waitForSelectionConfirmation(in app: XCUIApplication) {
     let confirmation = app.staticTexts["location-selection-confirmation"]
     for _ in 0..<4 where !confirmation.exists {
       app.scrollViews.firstMatch.swipeUp()
     }
     XCTAssertTrue(confirmation.waitForExistence(timeout: 5))
+  }
+
+  private func scrollPickerToTop(in app: XCUIApplication) {
+    let scrollView = app.scrollViews.firstMatch
+    for _ in 0..<6 {
+      scrollView.swipeDown()
+    }
   }
 
   private func permissionFixtureApp(
@@ -546,6 +818,12 @@ final class RemoteLocationLearningUITests: XCTestCase {
   private func learningApp() -> XCUIApplication {
     let app = XCUIApplication()
     app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "en"
+    return app
+  }
+
+  private func selectedLocationFixtureApp() -> XCUIApplication {
+    let app = learningApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_SELECTED_LOCATION"] = "31.230400,121.473700"
     return app
   }
 
