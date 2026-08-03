@@ -12,6 +12,14 @@ _Avoid_: Virtual Location, Fake GPS, Location Spoofing
 A single coordinate chosen inside the learning app and awaiting application through the Simulation Controller. Selection alone never represents a Simulated Location or an Observed Location.
 _Avoid_: Scenario Location, Simulated Location
 
+**Saved Location（已保存地点）**:
+A user-named coordinate stored locally on the Learning App's current device for later selection. Choosing one replaces the Selected Location and never applies a simulation automatically.
+_Avoid_: Recent Location, Location History, Applied Simulation
+
+**Fine Adjustment（位置微调）**:
+A map-based refinement that starts around the current Selected Location at a close viewing range and produces a replacement Selected Location. It imposes no movement boundary and never applies a simulation automatically.
+_Avoid_: Route Movement, Automatic Apply, Manual Coordinate Editing
+
 **Simulation Controller（模拟控制器）**:
 The developer-side participant that applies a selected location to the Active Test Device through the current Xcode development environment.
 _Avoid_: iPhone App, GPS Spoofer
@@ -43,6 +51,10 @@ _Avoid_: Route Playback, Journey Simulation
 **Stopped Simulation（已停止模拟）**:
 A Static Simulation that its Injection Backend reports is no longer active. It invalidates Applied Simulation and Verified Simulation, while the latest Observed Location may remain as an explicitly identified last observation.
 _Avoid_: Restored Physical Location, Cleared Observation
+
+**Simulation Diagnostic Record（模拟诊断记录）**:
+A persistent local chronology used to correlate selection, apply, stop, backend-result, and observation evidence while investigating a simulation incident. It records evidence only and never changes or retries simulation state.
+_Avoid_: Automatic Recovery, Simulation State, Telemetry
 
 **Observed Location（观测位置）**:
 The most recent Core Location value the learning app receives while in use. It can verify the app's own result but is not evidence of Cross-App Propagation.
