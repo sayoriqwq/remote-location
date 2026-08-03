@@ -70,6 +70,8 @@
 "Latitude (-90…90)" = "纬度 (-90…90)";
 "Longitude (-180…180)" = "经度 (-180…180)";
 "Save Selected Location" = "保存待应用位置";
+"Typing does not change the Selected Location until you use the button below." = "输入经纬度不会立即更改待应用位置；请点击下方按钮确认。";
+"Use Entered Coordinates" = "使用输入的坐标";
 "Choose on Map or Search" = "通过地图或搜索选择";
 "Latitude" = "纬度";
 "Longitude" = "经度";
@@ -99,6 +101,8 @@
 "Saved Locations stay on this iPhone and keep their creation order." = "已保存地点仅保留在此 iPhone 上，并按创建顺序排列。";
 "Choose Saved Location %@ at %@" = "选择已保存地点 %@（%@）";
 "Replaces Selected Location without applying a simulation." = "替换待应用位置，但不会应用模拟。";
+"Current Selected Location" = "当前待应用位置";
+"Choose" = "选择";
 "Rename Saved Location %@" = "重命名已保存地点 %@";
 "Delete Saved Location %@" = "删除已保存地点 %@";
 "Saved Location" = "已保存地点";
@@ -189,6 +193,8 @@
 "Done" = "完成";
 "Selected" = "已选择";
 "Use Map Center as Selected Location" = "将地图中心设为待应用位置";
+"Use Map Center" = "使用地图中心";
+"Map Center Selected" = "地图中心已选中";
 "Map center" = "地图中心";
 "Displacement from opening location" = "相对打开时位置的位移";
 "Map visible range" = "地图可视范围";

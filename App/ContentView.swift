@@ -43,11 +43,11 @@ struct ContentView: View {
     NavigationStack {
       Form {
         controllerLinkSection
-        diagnosticsSection
         selectionSection
         savedLocationsSection
         simulationSection
         observationSection
+        diagnosticsSection
         baselineSection
         limitationsSection
       }
@@ -145,9 +145,10 @@ struct ContentView: View {
       Button(localized("Save")) {
         model.saveCurrentLocation(named: savedLocationName)
       }
+      .disabled(savedLocationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       .accessibilityIdentifier("saved-location-confirm-save")
       Button(localized("Cancel"), role: .cancel) {}
-      .accessibilityIdentifier("saved-location-cancel-save")
+        .accessibilityIdentifier("saved-location-cancel-save")
     } message: {
       Text(localized("Name the current Selected Location so you can choose it later."))
     }
@@ -165,9 +166,10 @@ struct ContentView: View {
           model.renameSavedLocation(id: id, to: renameSavedLocationName)
         }
       }
+      .disabled(renameSavedLocationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       .accessibilityIdentifier("saved-location-confirm-rename")
       Button(localized("Cancel"), role: .cancel) {}
-      .accessibilityIdentifier("saved-location-cancel-rename")
+        .accessibilityIdentifier("saved-location-cancel-rename")
     } message: {
       Text(localized("Renaming changes only the Saved Location name."))
     }
@@ -183,7 +185,7 @@ struct ContentView: View {
       }
       .accessibilityIdentifier("saved-location-confirm-delete")
       Button(localized("Cancel"), role: .cancel) {}
-      .accessibilityIdentifier("saved-location-cancel-delete")
+        .accessibilityIdentifier("saved-location-cancel-delete")
     } message: {
       Text(
         localizedFormat(
@@ -266,9 +268,15 @@ struct ContentView: View {
           .keyboardType(.numberPad)
           .textContentType(.oneTimeCode)
           .accessibilityIdentifier("controller-pairing-code")
-        Button("Pair Controller") {
+        Button {
           controllerLink.pair()
+        } label: {
+          ActionButtonLabel(
+            title: Text("Pair Controller"),
+            systemImage: "link.badge.plus"
+          )
         }
+        .buttonStyle(.borderedProminent)
         .disabled(!controllerLink.canPair)
         .accessibilityIdentifier("pair-controller")
       }
@@ -278,9 +286,15 @@ struct ContentView: View {
           .keyboardType(.numberPad)
           .textContentType(.oneTimeCode)
           .accessibilityIdentifier("controller-pairing-code")
-        Button("Try Pairing Code Again") {
+        Button {
           controllerLink.pair()
+        } label: {
+          ActionButtonLabel(
+            title: Text("Try Pairing Code Again"),
+            systemImage: "arrow.clockwise"
+          )
         }
+        .buttonStyle(.borderedProminent)
         .disabled(!controllerLink.canPair)
         .accessibilityIdentifier("pair-controller")
       }
@@ -298,23 +312,41 @@ struct ContentView: View {
           "Allow Local Network access in Settings → Privacy & Security → Local Network, then retry."
         )
         .font(.footnote)
-        Button("Open Local Network Settings") {
+        Button {
           openURL(URL(string: UIApplication.openSettingsURLString)!)
+        } label: {
+          ActionButtonLabel(
+            title: Text("Open Local Network Settings"),
+            systemImage: "gearshape"
+          )
         }
+        .buttonStyle(.bordered)
         .accessibilityIdentifier("open-local-network-settings")
       }
 
       if shouldShowControllerRetry {
-        Button("Retry Controller Discovery") {
+        Button {
           controllerLink.retry()
+        } label: {
+          ActionButtonLabel(
+            title: Text("Retry Controller Discovery"),
+            systemImage: "arrow.clockwise"
+          )
         }
+        .buttonStyle(.bordered)
         .accessibilityIdentifier("retry-controller-discovery")
       }
 
       if case .connected = controllerLink.state, controllerLink.backendReadiness != .ready {
-        Button("Refresh Injection Backend Status") {
+        Button {
           controllerLink.refreshReadiness()
+        } label: {
+          ActionButtonLabel(
+            title: Text("Refresh Injection Backend Status"),
+            systemImage: "arrow.triangle.2.circlepath"
+          )
         }
+        .buttonStyle(.bordered)
         .accessibilityIdentifier("refresh-controller-readiness")
       }
     }
@@ -328,14 +360,30 @@ struct ContentView: View {
       TextField("Longitude (-180…180)", text: $model.longitudeText)
         .keyboardType(.numbersAndPunctuation)
         .accessibilityIdentifier("longitude-input")
-      Button("Save Selected Location") {
+      Text("Typing does not change the Selected Location until you use the button below.")
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+
+      Button {
         model.saveSelection()
+      } label: {
+        ActionButtonLabel(
+          title: Text("Use Entered Coordinates"),
+          systemImage: "location.fill"
+        )
       }
+      .buttonStyle(.borderedProminent)
       .accessibilityIdentifier("save-selection")
 
-      Button("Choose on Map or Search") {
+      Button {
         showingLocationPicker = true
+      } label: {
+        ActionButtonLabel(
+          title: Text("Choose on Map or Search"),
+          systemImage: "map"
+        )
       }
+      .buttonStyle(.bordered)
       .accessibilityIdentifier("open-location-picker")
 
       if let selected = model.selection.selected {
@@ -398,14 +446,27 @@ struct ContentView: View {
       Button {
         diagnostics.export()
       } label: {
-        Text(localized(diagnostics.isExporting ? "Exporting…" : "Export Diagnostics"))
+        ActionButtonLabel(
+          title: Text(localized(diagnostics.isExporting ? "Exporting…" : "Export Diagnostics")),
+          systemImage: "square.and.arrow.up",
+          isBusy: diagnostics.isExporting
+        )
       }
+      .buttonStyle(.bordered)
       .disabled(diagnostics.isExporting)
       .accessibilityIdentifier("diagnostics-export")
 
-      Button(localized("Clear Diagnostics"), role: .destructive) {
+      Button(role: .destructive) {
         diagnostics.clear()
+      } label: {
+        ActionButtonLabel(
+          title: Text(localized("Clear Diagnostics")),
+          systemImage: "trash"
+        )
       }
+      .buttonStyle(.bordered)
+      .tint(.red)
+      .disabled(diagnostics.isExporting)
       .accessibilityIdentifier("diagnostics-clear")
 
       if let actionError = diagnostics.actionError {
@@ -435,8 +496,12 @@ struct ContentView: View {
         savedLocationName = ""
         showingSavedLocationNamePrompt = true
       } label: {
-        Label(localized("Save Current Location"), systemImage: "plus.circle")
+        ActionButtonLabel(
+          title: Text(localized("Save Current Location")),
+          systemImage: "plus.circle"
+        )
       }
+      .buttonStyle(.bordered)
       .disabled(model.selection.selected == nil)
       .accessibilityIdentifier("save-current-location")
 
@@ -455,12 +520,12 @@ struct ContentView: View {
           localized(savedLocationError),
           systemImage: "exclamationmark.triangle"
         )
-          .foregroundStyle(.red)
-          .accessibilityIdentifier(
-            model.savedLocationPersistenceError
-              ? "saved-location-persistence-error"
-              : "saved-location-error"
-          )
+        .foregroundStyle(.red)
+        .accessibilityIdentifier(
+          model.savedLocationPersistenceError
+            ? "saved-location-persistence-error"
+            : "saved-location-error"
+        )
       }
     } header: {
       Text(localized("Saved Locations"))
@@ -470,18 +535,32 @@ struct ContentView: View {
   }
 
   private func savedLocationRow(_ savedLocation: SavedLocation) -> some View {
-    HStack(alignment: .top, spacing: 8) {
+    let isSelected = model.selection.selected == savedLocation.coordinate
+
+    return HStack(alignment: .top, spacing: 8) {
       Button {
         _ = model.select(savedLocation.coordinate, source: .saved)
       } label: {
-        VStack(alignment: .leading, spacing: 4) {
-          Text(savedLocation.name)
-            .font(.body.weight(.semibold))
-          Text(savedLocationCoordinateDescription(savedLocation.coordinate))
-            .font(.footnote.monospacedDigit())
-            .foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+          VStack(alignment: .leading, spacing: 4) {
+            Text(savedLocation.name)
+              .font(.body.weight(.semibold))
+            Text(savedLocationCoordinateDescription(savedLocation.coordinate))
+              .font(.footnote.monospacedDigit())
+              .foregroundStyle(.secondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+
+          Image(systemName: isSelected ? "checkmark.circle.fill" : "chevron.right")
+            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+          isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08),
+          in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -498,6 +577,10 @@ struct ContentView: View {
       .accessibilityHint(
         Text(localized("Replaces Selected Location without applying a simulation."))
       )
+      .accessibilityValue(
+        Text(localized(isSelected ? "Current Selected Location" : "Choose"))
+      )
+      .accessibilityAddTraits(isSelected ? .isSelected : [])
       .accessibilityIdentifier(
         "saved-location-select-\(savedLocation.id.uuidString)"
       )
@@ -510,6 +593,7 @@ struct ContentView: View {
       } label: {
         Image(systemName: "pencil")
           .frame(width: 44, height: 44)
+          .background(Color.secondary.opacity(0.1), in: Circle())
       }
       .buttonStyle(.borderless)
       .frame(width: 44, height: 44)
@@ -529,6 +613,7 @@ struct ContentView: View {
         Image(systemName: "trash")
           .foregroundStyle(.red)
           .frame(width: 44, height: 44)
+          .background(Color.red.opacity(0.1), in: Circle())
       }
       .buttonStyle(.borderless)
       .frame(width: 44, height: 44)
@@ -570,8 +655,13 @@ struct ContentView: View {
           model.receiveApplyResponse(response, for: request)
         }
       } label: {
-        Text(localized(model.isApplying ? "Applying…" : "Apply Selected Location"))
+        ActionButtonLabel(
+          title: Text(localized(model.isApplying ? "Applying…" : "Apply Selected Location")),
+          systemImage: "location.circle.fill",
+          isBusy: model.isApplying
+        )
       }
+      .buttonStyle(.borderedProminent)
       .disabled(
         model.selection.selected == nil
           || model.isApplying
@@ -596,8 +686,14 @@ struct ContentView: View {
           model.receiveStopResponse(response, for: requestID)
         }
       } label: {
-        Text(localized(model.isStopping ? "Stopping…" : "Stop Simulation"))
+        ActionButtonLabel(
+          title: Text(localized(model.isStopping ? "Stopping…" : "Stop Simulation")),
+          systemImage: "stop.circle",
+          isBusy: model.isStopping
+        )
       }
+      .buttonStyle(.bordered)
+      .tint(.red)
       .disabled(
         model.manualSession.activeAppliedRequest == nil
           || model.isStopping
@@ -612,11 +708,12 @@ struct ContentView: View {
   private var manualSimulationStatus: some View {
     switch model.manualSession.status {
     case .noSelection:
-      Text("Save a Selected Location to begin.")
+      Label("Save a Selected Location to begin.", systemImage: "location.slash")
         .foregroundStyle(.secondary)
         .accessibilityIdentifier("simulation-status")
     case .selected:
-      Text("Selected — waiting to apply")
+      Label("Selected — waiting to apply", systemImage: "location.circle")
+        .foregroundStyle(.blue)
         .accessibilityIdentifier("simulation-status")
     case .applying(let request):
       Label("Applying to the Injection Backend…", systemImage: "arrow.up.circle")
@@ -658,7 +755,7 @@ struct ContentView: View {
         .accessibilityIdentifier("simulation-diagnostic")
       requestIdentity(request)
     case .stopped:
-      Text("No Applied Simulation is active.")
+      Label("No Applied Simulation is active.", systemImage: "stop.circle")
         .foregroundStyle(.secondary)
         .accessibilityIdentifier("simulation-status")
     }
@@ -719,9 +816,15 @@ struct ContentView: View {
       case .denied:
         Text("Location access is denied. Enable While Using the App in Settings, then return here.")
           .font(.footnote)
-        Button("Open Location Settings") {
+        Button {
           openURL(URL(string: UIApplication.openSettingsURLString)!)
+        } label: {
+          ActionButtonLabel(
+            title: Text("Open Location Settings"),
+            systemImage: "gearshape"
+          )
         }
+        .buttonStyle(.bordered)
         .accessibilityIdentifier("open-location-settings")
       case .restricted:
         Text(
@@ -792,9 +895,15 @@ struct ContentView: View {
       .font(.footnote)
       .foregroundStyle(.secondary)
 
-      Button("Start 15-second Observation Window") {
+      Button {
         model.beginObservationWindow()
+      } label: {
+        ActionButtonLabel(
+          title: Text("Start 15-second Observation Window"),
+          systemImage: "timer"
+        )
       }
+      .buttonStyle(.bordered)
       .disabled(model.session.selected == nil)
       .accessibilityIdentifier("start-observation-window")
 

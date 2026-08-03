@@ -63,12 +63,14 @@ final class RepositoryV11RequirementsTests: XCTestCase {
     process.waitUntilExit()
     XCTAssertEqual(process.terminationStatus, 0)
 
-    let copiedMetadata = try Data(contentsOf: destination.appendingPathComponent(
-      "mac-controller.metadata.json"
-    ))
-    let copiedEvents = try String(contentsOf: destination.appendingPathComponent(
-      "mac-controller.jsonl"
-    ), encoding: .utf8)
+    let copiedMetadata = try Data(
+      contentsOf: destination.appendingPathComponent(
+        "mac-controller.metadata.json"
+      ))
+    let copiedEvents = try String(
+      contentsOf: destination.appendingPathComponent(
+        "mac-controller.jsonl"
+      ), encoding: .utf8)
     let object = try JSONSerialization.jsonObject(with: copiedMetadata) as? [String: Any]
     XCTAssertEqual(object?["schemaVersion"] as? Int, 1)
     XCTAssertNotNil(object?["generationID"] as? String)
@@ -145,6 +147,44 @@ final class RepositoryV11RequirementsTests: XCTestCase {
     XCTAssertTrue(
       info["UILaunchScreen"] != nil || info["UILaunchStoryboardName"] != nil,
       "A launch screen is required to avoid iPhone compatibility letterboxing"
+    )
+  }
+
+  func testLearningAppBuildConfigurationCompilesTheBrandedAppIcon() throws {
+    let specification = try String(
+      contentsOf: repositoryRoot.appending(path: "project.yml"),
+      encoding: .utf8
+    )
+    XCTAssertTrue(
+      specification.contains("ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon"),
+      "The XcodeGen source of truth must select the AppIcon set"
+    )
+
+    let project = try String(
+      contentsOf: repositoryRoot.appending(
+        path: "RemoteLocation.xcodeproj/project.pbxproj"
+      ),
+      encoding: .utf8
+    )
+    XCTAssertEqual(
+      project.components(separatedBy: "ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;")
+        .count - 1,
+      2,
+      "Both generated Learning App build configurations must select AppIcon"
+    )
+
+    let catalogData = try Data(
+      contentsOf: repositoryRoot.appending(
+        path: "App/Assets.xcassets/AppIcon.appiconset/Contents.json"
+      )
+    )
+    let catalog = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: catalogData) as? [String: Any]
+    )
+    let images = try XCTUnwrap(catalog["images"] as? [[String: Any]])
+    XCTAssertTrue(
+      images.contains { $0["filename"] as? String == "AppIcon.png" },
+      "The selected AppIcon set must retain its source image"
     )
   }
 }

@@ -16,6 +16,7 @@ struct LocationPickerView: View {
   @State private var restorationConfirmation: String?
   @State private var selectionFailure: String?
   @State private var hasCommittedSelection = false
+  @State private var committedLocation: SelectedLocation?
   @FocusState private var searchFieldFocused: Bool
 
   let selected: SelectedLocation?
@@ -36,6 +37,7 @@ struct LocationPickerView: View {
     )
     _mapCenter = State(initialValue: center)
     _adjustmentOrigin = State(initialValue: selected)
+    _committedLocation = State(initialValue: selected)
     _displacementMeters = State(
       initialValue: selected == nil ? nil : 0
     )
@@ -122,9 +124,9 @@ struct LocationPickerView: View {
   private var mapSection: some View {
     GroupBox("Map") {
       VStack(alignment: .leading, spacing: 12) {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack {
           Map(position: $cameraPosition) {
-            if let markerLocation = adjustmentOrigin ?? selected {
+            if let markerLocation = committedLocation {
               Marker(
                 "Selected",
                 coordinate: CLLocationCoordinate2D(
@@ -155,25 +157,24 @@ struct LocationPickerView: View {
           }
           .accessibilityIdentifier("location-map")
 
-          Button {
-            selectMapCenter()
-          } label: {
-            Image(systemName: "scope")
-              .font(.title2.weight(.semibold))
-              .foregroundStyle(.blue)
-              .frame(minWidth: 44, minHeight: 44)
-              .background(.thinMaterial, in: Circle())
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("Use Map Center as Selected Location")
-          .accessibilityHint("Commits the map center without applying a simulation.")
-          .accessibilityIdentifier("use-map-center")
-          .padding(12)
-          .zIndex(1)
         }
         .frame(height: 300)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .contain)
+
+        Button {
+          selectMapCenter()
+        } label: {
+          ActionButtonLabel(
+            title: Text(mapCenterIsSelected ? "Map Center Selected" : "Use Map Center"),
+            systemImage: mapCenterIsSelected ? "checkmark.circle.fill" : "scope"
+          )
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityLabel("Use Map Center as Selected Location")
+        .accessibilityHint("Commits the map center without applying a simulation.")
+        .accessibilityAddTraits(mapCenterIsSelected ? .isSelected : [])
+        .accessibilityIdentifier("use-map-center")
 
         LabeledContent("Map center") {
           Text(
@@ -196,10 +197,15 @@ struct LocationPickerView: View {
               .accessibilityIdentifier("map-visible-range")
           }
 
-          Button("Restore Opening Location") {
+          Button {
             restoreOpeningLocation()
+          } label: {
+            ActionButtonLabel(
+              title: Text("Restore Opening Location"),
+              systemImage: "arrow.uturn.backward"
+            )
           }
-          .frame(minHeight: 44)
+          .buttonStyle(.bordered)
           .accessibilityIdentifier("restore-opening-location")
         }
 
@@ -221,10 +227,17 @@ struct LocationPickerView: View {
           }
           .accessibilityIdentifier("place-search-input")
 
-        Button("Search Places") {
+        Button {
           searchFieldFocused = false
           searchModel.search()
+        } label: {
+          ActionButtonLabel(
+            title: Text(searchModel.status == .searching ? "Searching…" : "Search Places"),
+            systemImage: "magnifyingglass",
+            isBusy: searchModel.status == .searching
+          )
         }
+        .buttonStyle(.bordered)
         .disabled(!searchModel.canSearch)
         .accessibilityIdentifier("search-places")
 
@@ -271,19 +284,30 @@ struct LocationPickerView: View {
             )
           )
         } label: {
-          VStack(alignment: .leading, spacing: 2) {
-            Text(localized(result.name))
-              .foregroundStyle(.primary)
-            if let detail = result.detail {
-              Text(localized(detail))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+          HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+              Text(localized(result.name))
+                .foregroundStyle(.primary)
+              if let detail = result.detail {
+                Text(localized(detail))
+                  .font(.footnote)
+                  .foregroundStyle(.secondary)
+              }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Image(systemName: "chevron.right")
+              .foregroundStyle(.secondary)
+              .accessibilityHidden(true)
           }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(12)
+          .background(
+            Color.secondary.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+          )
+          .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.vertical, 6)
         .accessibilityIdentifier("place-search-result")
       }
     }
@@ -340,6 +364,7 @@ struct LocationPickerView: View {
   ) {
     if onSelect(location, source) {
       hasCommittedSelection = true
+      committedLocation = location
       selectionConfirmation = confirmation
       restorationConfirmation = nil
       selectionFailure = nil
@@ -383,6 +408,7 @@ struct LocationPickerView: View {
 
     if onSelect(adjustmentOrigin, .map) {
       hasCommittedSelection = false
+      committedLocation = adjustmentOrigin
       selectionConfirmation = nil
       restorationConfirmation = localized(
         "Opening location restored as the Selected Location."
@@ -416,6 +442,23 @@ struct LocationPickerView: View {
       )
       mapVisibleRangeMeters = visibleRangeMeters(for: region)
     }
+  }
+
+  private var mapCenterIsSelected: Bool {
+    guard
+      let committedLocation,
+      let currentMapCenter = try? SelectedLocation(
+        latitude: mapCenter.latitude,
+        longitude: mapCenter.longitude
+      )
+    else {
+      return false
+    }
+
+    return LocationDistance.meters(
+      from: committedLocation,
+      to: currentMapCenter
+    ) <= 1
   }
 
   private func visibleRangeMeters(for region: MKCoordinateRegion) -> Double? {

@@ -84,31 +84,37 @@ final class RemoteLocationLearningUITests: XCTestCase {
     app.tap()
 
     let status = app.staticTexts["diagnostics-status"]
+    scrollUp(until: status, in: app)
     XCTAssertTrue(status.waitForExistence(timeout: 5))
-    XCTAssertTrue(waitForLabel(status, equalTo: "Enabled", timeout: 5))
+    XCTAssertTrue(waitForLabel(status, endingWith: "Enabled", timeout: 5))
     let size = app.staticTexts["diagnostics-size"]
+    scrollUp(until: size, in: app)
     XCTAssertTrue(size.exists)
     let eventCount = app.staticTexts["diagnostics-event-count"]
+    scrollUp(until: eventCount, in: app)
     XCTAssertTrue(eventCount.exists)
 
     let clear = app.buttons["diagnostics-clear"]
+    scrollUp(until: clear, in: app)
     XCTAssertTrue(clear.exists)
     clear.tap()
     XCTAssertTrue(
       waitForLabel(
         eventCount,
-        equalTo: "0",
+        endingWith: "0",
         timeout: 5
       )
     )
 
     let simulationStatus = app.staticTexts.matching(identifier: "simulation-status").firstMatch
+    scrollToTop(in: app)
     scrollUp(until: simulationStatus, in: app)
     XCTAssertTrue(simulationStatus.waitForExistence(timeout: 5))
     XCTAssertEqual(simulationStatus.label, "Save a Selected Location to begin.")
 
     scrollToTop(in: app)
     let export = app.buttons["diagnostics-export"]
+    scrollUp(until: export, in: app)
     XCTAssertTrue(export.waitForExistence(timeout: 5))
     export.tap()
   }
@@ -341,6 +347,8 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertTrue(firstRow.label.contains("31.230400"))
     XCTAssertTrue(secondRow.label.contains("Berlin"))
     XCTAssertTrue(secondRow.label.contains("52.520000"))
+    XCTAssertFalse(firstRow.isSelected)
+    XCTAssertTrue(secondRow.isSelected)
 
     assertSavedLocationSelectionIsInactive(in: app)
 
@@ -354,7 +362,9 @@ final class RemoteLocationLearningUITests: XCTestCase {
       index: 0
     )
     XCTAssertTrue(persistedFirstRow.waitForExistence(timeout: 5))
+    XCTAssertFalse(persistedFirstRow.isSelected)
     persistedFirstRow.tap()
+    XCTAssertTrue(persistedFirstRow.isSelected)
     assertSelectedCoordinate(coordinateA, source: "Saved Location", in: app)
     assertSavedLocationSelectionIsInactive(in: app)
 
@@ -364,7 +374,10 @@ final class RemoteLocationLearningUITests: XCTestCase {
       index: 1
     )
     XCTAssertTrue(persistedSecondRow.waitForExistence(timeout: 5))
+    XCTAssertFalse(persistedSecondRow.isSelected)
     persistedSecondRow.tap()
+    XCTAssertFalse(persistedFirstRow.isSelected)
+    XCTAssertTrue(persistedSecondRow.isSelected)
     assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
     assertSavedLocationSelectionIsInactive(in: app)
 
@@ -382,8 +395,9 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertTrue(renameField.waitForExistence(timeout: 5))
     replaceRenameText(in: renameField, with: "Shanghai QA", in: renameAlert)
     app.buttons["saved-location-confirm-rename"].firstMatch.tap()
-    XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Shanghai QA"))
-      .firstMatch.waitForExistence(timeout: 5))
+    XCTAssertTrue(
+      app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Shanghai QA"))
+        .firstMatch.waitForExistence(timeout: 5))
     assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
     assertSavedLocationSelectionIsInactive(in: app)
 
@@ -424,7 +438,8 @@ final class RemoteLocationLearningUITests: XCTestCase {
     )
   }
 
-  func testSavedLocationSelectionAndDeletionPreserveAcknowledgedAppliedSimulationUntilExplicitStop() {
+  func testSavedLocationSelectionAndDeletionPreserveAcknowledgedAppliedSimulationUntilExplicitStop()
+  {
     let app = savedLocationsFixtureApp()
     app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
     app.launch()
@@ -686,6 +701,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertTrue(map.waitForExistence(timeout: 5))
     XCTAssertEqual(map.label, "Map center")
     XCTAssertTrue(selectMapCenter.waitForExistence(timeout: 5))
+    XCTAssertFalse(selectMapCenter.isSelected)
     XCTAssertTrue(done.waitForExistence(timeout: 5))
     XCTAssertFalse(app.staticTexts["map-visible-range"].exists)
     XCTAssertFalse(app.buttons["restore-opening-location"].exists)
@@ -698,6 +714,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertTrue(picker.waitForExistence(timeout: 2))
 
     selectMapCenter.tap()
+    XCTAssertTrue(selectMapCenter.isSelected)
     XCTAssertTrue(
       app.staticTexts["location-selection-confirmation"].waitForExistence(timeout: 5)
     )
@@ -1290,13 +1307,18 @@ final class RemoteLocationLearningUITests: XCTestCase {
 
   private func waitForDiagnostics(in app: XCUIApplication) {
     scrollToTop(in: app)
-    XCTAssertTrue(app.staticTexts["diagnostics-status"].waitForExistence(timeout: 5))
-    XCTAssertTrue(app.staticTexts["diagnostics-event-count"].waitForExistence(timeout: 5))
+    let status = app.staticTexts["diagnostics-status"]
+    scrollUp(until: status, in: app)
+    XCTAssertTrue(status.waitForExistence(timeout: 5))
+    let eventCount = app.staticTexts["diagnostics-event-count"]
+    scrollUp(until: eventCount, in: app)
+    XCTAssertTrue(eventCount.waitForExistence(timeout: 5))
   }
 
   private func clearDiagnostics(in app: XCUIApplication) {
     scrollToTop(in: app)
     let clear = app.buttons["diagnostics-clear"]
+    scrollUp(until: clear, in: app)
     XCTAssertTrue(clear.waitForExistence(timeout: 5))
     clear.tap()
     let eventCount = app.staticTexts["diagnostics-event-count"]
@@ -1308,6 +1330,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   ) -> ExportedDiagnosticArtifact? {
     scrollToTop(in: app)
     let export = app.buttons["diagnostics-export"]
+    scrollUp(until: export, in: app)
     XCTAssertTrue(export.waitForExistence(timeout: 5))
     export.tap()
 
@@ -1334,9 +1357,11 @@ final class RemoteLocationLearningUITests: XCTestCase {
     XCTAssertEqual(artifact.schemaVersion, 1)
     XCTAssertEqual(artifact.side, "learning-app")
     XCTAssertFalse(artifact.createdAt.isEmpty)
-    guard let launchIndex = artifact.events.lastIndex(where: {
-      $0.kind == "app.lifecycle.launched"
-    }) else {
+    guard
+      let launchIndex = artifact.events.lastIndex(where: {
+        $0.kind == "app.lifecycle.launched"
+      })
+    else {
       XCTFail("The exported artifact did not contain an app lifecycle event.")
       return nil
     }
