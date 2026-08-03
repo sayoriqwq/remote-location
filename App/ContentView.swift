@@ -22,18 +22,20 @@ struct ContentView: View {
 
   init(language: Binding<AppLanguage>) {
     _language = language
-    let recorder = SimulationDiagnosticRecorder(side: .learningApp)
+    let diagnostics = SimulationDiagnosticPipeline(
+      recorder: SimulationDiagnosticRecorder(side: .learningApp)
+    )
     _observer = StateObject(
-      wrappedValue: LocationObserver(diagnostics: recorder)
+      wrappedValue: LocationObserver(diagnostics: diagnostics)
     )
     _model = StateObject(
-      wrappedValue: BaselineViewModel(diagnostics: recorder)
+      wrappedValue: BaselineViewModel(diagnostics: diagnostics)
     )
     _controllerLink = StateObject(
-      wrappedValue: ControllerLinkViewModel(diagnostics: recorder)
+      wrappedValue: ControllerLinkViewModel(diagnostics: diagnostics)
     )
     _diagnostics = StateObject(
-      wrappedValue: SimulationDiagnosticsViewModel(recorder: recorder)
+      wrappedValue: SimulationDiagnosticsViewModel(diagnostics: diagnostics)
     )
   }
 

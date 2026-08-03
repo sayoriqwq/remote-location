@@ -12,14 +12,14 @@ final class BaselineViewModel: ObservableObject {
   @Published private(set) var savedLocationError: String?
   @Published private(set) var savedLocationPersistenceError = false
 
-  private let diagnostics: SimulationDiagnosticRecorder?
+  private let diagnostics: SimulationDiagnosticPipeline?
   private var savedLocationRepository: SavedLocationRepository
   private var expirationTask: Task<Void, Never>?
   private var manualExpirationTask: Task<Void, Never>?
 
   init(
     savedLocationStore: any SavedLocationStore = FileSavedLocationStore(),
-    diagnostics: SimulationDiagnosticRecorder? = nil
+    diagnostics: SimulationDiagnosticPipeline? = nil
   ) {
     self.diagnostics = diagnostics
     if let resetToken = ProcessInfo.processInfo.environment[
@@ -387,9 +387,7 @@ final class BaselineViewModel: ObservableObject {
     fields: SimulationDiagnosticFields = [:]
   ) {
     guard let diagnostics else { return }
-    Task {
-      await diagnostics.record(kind: kind, requestID: requestID, fields: fields)
-    }
+    diagnostics.record(kind: kind, requestID: requestID, fields: fields)
   }
 
   private func responseFields(_ response: ControllerLinkResponse) -> SimulationDiagnosticFields {

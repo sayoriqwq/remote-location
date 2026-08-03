@@ -17,7 +17,7 @@ final class ControllerLinkViewModel: ObservableObject {
 
   private let discovery: any ControllerDiscovering
   private let link: TrustedControllerLink
-  private let diagnostics: SimulationDiagnosticRecorder?
+  private let diagnostics: SimulationDiagnosticPipeline?
   private var discoveryTask: Task<Void, Never>?
   private var mayAttemptConnection = true
   private var hasPairingCandidate = false
@@ -47,7 +47,7 @@ final class ControllerLinkViewModel: ObservableObject {
       authorizationStore: KeychainControllerAuthorizationStore(),
       transport: NetworkControllerLinkTransport()
     ),
-    diagnostics: SimulationDiagnosticRecorder? = nil
+    diagnostics: SimulationDiagnosticPipeline? = nil
   ) {
     self.discovery = discovery
     self.link = link
@@ -269,9 +269,7 @@ final class ControllerLinkViewModel: ObservableObject {
     fields: SimulationDiagnosticFields = [:]
   ) {
     guard let diagnostics else { return }
-    Task {
-      await diagnostics.record(kind: kind, requestID: requestID, fields: fields)
-    }
+    diagnostics.record(kind: kind, requestID: requestID, fields: fields)
   }
 
   private func eventFields(_ event: ControllerDiscoveryEvent) -> SimulationDiagnosticFields {

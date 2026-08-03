@@ -137,6 +137,22 @@ struct LocationPickerView: View {
           .onMapCameraChange(frequency: .onEnd) { context in
             updateMapFeedback(for: context.region)
           }
+          .overlay {
+            Image(systemName: "scope")
+              .font(.title2.weight(.semibold))
+              .foregroundStyle(.blue)
+              .padding(8)
+              .background(.thinMaterial, in: Circle())
+              .allowsHitTesting(false)
+              .accessibilityHidden(true)
+          }
+          .accessibilityLabel(localized("Map center"))
+          .accessibilityHint(
+            localized("Commits the map center without applying a simulation.")
+          )
+          .accessibilityAction(named: localized("Use Map Center as Selected Location")) {
+            selectMapCenter()
+          }
           .accessibilityIdentifier("location-map")
 
           Button {

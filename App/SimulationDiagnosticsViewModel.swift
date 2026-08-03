@@ -4,7 +4,7 @@ import UIKit
 
 @MainActor
 final class SimulationDiagnosticsViewModel: ObservableObject {
-  let recorder: SimulationDiagnosticRecorder
+  let diagnostics: SimulationDiagnosticPipeline
 
   @Published private(set) var status: SimulationDiagnosticRecordStatus?
   @Published private(set) var exportedURL: URL?
@@ -15,12 +15,12 @@ final class SimulationDiagnosticsViewModel: ObservableObject {
     @Published private(set) var exportedArtifactJSON: String?
   #endif
 
-  init(recorder: SimulationDiagnosticRecorder) {
-    self.recorder = recorder
+  init(diagnostics: SimulationDiagnosticPipeline) {
+    self.diagnostics = diagnostics
   }
 
   func recordAppLaunch() async {
-    await recorder.record(
+    diagnostics.record(
       kind: "app.lifecycle.launched",
       fields: ["workflow": .text("local-test-diagnostics")]
     )
@@ -35,7 +35,7 @@ final class SimulationDiagnosticsViewModel: ObservableObject {
   }
 
   func refreshNow() async {
-    status = await recorder.status()
+    status = await diagnostics.status()
   }
 
   func export() {
@@ -47,7 +47,7 @@ final class SimulationDiagnosticsViewModel: ObservableObject {
       let destination = FileManager.default.temporaryDirectory
         .appendingPathComponent("Pinshift-Diagnostics-\(UUID().uuidString).json", isDirectory: false)
       do {
-        let data = try await recorder.exportData()
+        let data = try await diagnostics.exportData()
         try data.write(to: destination, options: .atomic)
         exportedURL = destination
         #if DEBUG
@@ -73,7 +73,7 @@ final class SimulationDiagnosticsViewModel: ObservableObject {
     actionError = nil
     Task { [weak self] in
       guard let self else { return }
-      if !(await recorder.clear()) {
+      if !(await diagnostics.clear()) {
         actionError = "The diagnostic record could not be cleared."
       }
       await refreshNow()

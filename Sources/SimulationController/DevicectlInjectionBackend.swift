@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import LocationDomain
 import SimulationDiagnostics
@@ -61,7 +62,15 @@ public struct FoundationDevicectlCommandExecutor: DevicectlCommandExecuting {
     "HOME", "TMPDIR", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "LC_CTYPE",
   ]
 
-  public init() {}
+  private let executableURL: URL
+
+  public init() {
+    self.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+  }
+
+  init(executableURL: URL) {
+    self.executableURL = executableURL
+  }
 
   static func sanitizedEnvironment(
     inherited: [String: String],
@@ -85,7 +94,7 @@ public struct FoundationDevicectlCommandExecutor: DevicectlCommandExecuting {
   ) -> DevicectlCommandExecutionResult {
     let startedAt = Date()
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+    process.executableURL = executableURL
     process.arguments = invocation.arguments
 
     process.environment = Self.sanitizedEnvironment(
@@ -126,22 +135,29 @@ public struct FoundationDevicectlCommandExecutor: DevicectlCommandExecuting {
     }
 
     let waiter = DispatchSemaphore(value: 0)
-    DispatchQueue.global(qos: .utility).async {
-      process.waitUntilExit()
-      waiter.signal()
-    }
+    process.terminationHandler = { _ in waiter.signal() }
 
     let timeout = max(0.001, invocation.timeoutSeconds)
     let timedOut = waiter.wait(timeout: .now() + timeout) == .timedOut
     if timedOut {
       process.terminate()
-      process.waitUntilExit()
+      if waiter.wait(timeout: .now() + 0.2) == .timedOut, process.isRunning {
+        kill(process.processIdentifier, SIGKILL)
+        _ = waiter.wait(timeout: .now() + 0.2)
+      }
     }
-    readers.wait()
+    // A subprocess may leave a descendant holding either inherited pipe open.
+    // Drain only for a bounded interval, then close our read ends so this call
+    // returns its timeout result instead of waiting for that descendant.
+    if readers.wait(timeout: .now() + 0.2) == .timedOut {
+      try? standardOutput.fileHandleForReading.close()
+      try? standardError.fileHandleForReading.close()
+      _ = readers.wait(timeout: .now() + 0.2)
+    }
 
     let details = DevicectlCommandExecutionDetails(
       launchSucceeded: true,
-      exitStatus: process.terminationStatus,
+      exitStatus: process.isRunning ? nil : process.terminationStatus,
       duration: Date().timeIntervalSince(startedAt),
       standardOutput: String(
         data: outputData.value(),
@@ -309,7 +325,9 @@ public actor DevicectlInjectionBackend: InjectionBackend {
       "developerDirectory": .text(
         invocation.environmentOverrides["DEVELOPER_DIR"] ?? developerDirectory
       ),
-      "device": .text(DevicectlDiagnosticRedactor.placeholder),
+      // The local artifact is intended to correlate an invocation to the
+      // configured Active Test Device. It is never printed by the controller.
+      "device": .text(device),
       "timeoutSeconds": .number(invocation.timeoutSeconds),
     ]
   }
@@ -393,14 +411,9 @@ public actor DevicectlInjectionBackend: InjectionBackend {
 }
 
 private enum DevicectlDiagnosticRedactor {
-  static let placeholder = "<redacted-device>"
-
-  // Only the configured selector is replaced. The request ID remains in the
-  // diagnostic envelope and unrelated failure text remains useful.
-  static func text(_ value: String, selector: String) -> String {
-    guard !selector.isEmpty else { return value }
-    return value.replacingOccurrences(of: selector, with: placeholder)
-  }
+  // SimulationDiagnosticValue.text performs credential-shaped redaction. The
+  // active selector itself is deliberately retained in local diagnostics.
+  static func text(_ value: String, selector _: String) -> String { value }
 
   static func arguments(
     _ arguments: [String],
@@ -412,7 +425,7 @@ private enum DevicectlDiagnosticRedactor {
       let argument = arguments[index]
       if argument == "--device", index + 1 < arguments.count {
         redacted.append(.text(argument))
-        redacted.append(.text(placeholder))
+        redacted.append(.text(selector))
         index += 2
       } else {
         redacted.append(.text(text(argument, selector: selector)))

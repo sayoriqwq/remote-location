@@ -15,10 +15,10 @@ final class LocationObserver: NSObject, ObservableObject {
   @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
   @Published private(set) var errorMessage: String?
 
-  private let diagnostics: SimulationDiagnosticRecorder?
+  private let diagnostics: SimulationDiagnosticPipeline?
   private let manager = CLLocationManager()
 
-  init(diagnostics: SimulationDiagnosticRecorder? = nil) {
+  init(diagnostics: SimulationDiagnosticPipeline? = nil) {
     self.diagnostics = diagnostics
     super.init()
     manager.delegate = self
@@ -102,9 +102,7 @@ final class LocationObserver: NSObject, ObservableObject {
     fields: SimulationDiagnosticFields = [:]
   ) {
     guard let diagnostics else { return }
-    Task {
-      await diagnostics.record(kind: kind, fields: fields)
-    }
+    diagnostics.record(kind: kind, fields: fields)
   }
 }
 

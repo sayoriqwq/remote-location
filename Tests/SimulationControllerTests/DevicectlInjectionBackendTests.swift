@@ -180,13 +180,13 @@ final class DevicectlInjectionBackendTests: XCTestCase {
     )
     XCTAssertEqual(
       events[0].fields["device"],
-      .string("<redacted-device>")
+      .string("Active Test Device")
     )
     let exported = String(data: try await diagnostics.exportData(), encoding: .utf8)!
     XCTAssertFalse(exported.contains("REMOTE_LOCATION_E2E_PAIRING_CODE"))
   }
 
-  func testDiagnosticsRedactConfiguredDeviceSelectorFromArgumentsAndOutputButKeepRequestID() async throws {
+  func testDiagnosticsPreserveConfiguredDeviceSelectorInTheLocalArtifact() async throws {
     let directory = temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directory) }
     let diagnostics = SimulationDiagnosticRecorder(
@@ -222,30 +222,70 @@ final class DevicectlInjectionBackendTests: XCTestCase {
     XCTAssertEqual(events.count, 2)
     XCTAssertEqual(events[0].requestID, requestID)
     XCTAssertEqual(events[1].requestID, requestID)
-    XCTAssertEqual(events[0].fields["device"], .string("<redacted-device>"))
+    XCTAssertEqual(events[0].fields["device"], .string(selector))
     XCTAssertEqual(
       events[0].fields["arguments"],
       .array([
         .string("devicectl"), .string("device"), .string("simulate"),
         .string("location"), .string("clear"), .string("--device"),
-        .string("<redacted-device>"), .string("--quiet"),
+        .string(selector), .string("--quiet"),
         .string("--timeout"), .string("15"),
       ])
     )
     XCTAssertEqual(
       events[1].fields["standardOutput"],
-      .string("devicectl echoed <redacted-device>; unrelated diagnostic text")
+      .string("devicectl echoed " + selector + "; unrelated diagnostic text")
     )
     XCTAssertEqual(
       events[1].fields["standardError"],
-      .string("clear rejected for device <redacted-device>; device is locked")
+      .string("clear rejected for device " + selector + "; device is locked")
     )
 
     let exported = String(data: try await diagnostics.exportData(), encoding: .utf8)!
-    XCTAssertFalse(exported.contains(selector))
+    XCTAssertTrue(exported.contains(selector))
     XCTAssertTrue(exported.contains(requestID.uuidString))
     XCTAssertTrue(exported.contains("unrelated diagnostic text"))
     XCTAssertTrue(exported.contains("device is locked"))
+  }
+
+  func testProductionExecutorTimesOutWithoutWaitingForDescendantHeldPipes() {
+    let executor = FoundationDevicectlCommandExecutor(
+      executableURL: URL(fileURLWithPath: "/bin/sh")
+    )
+    let startedAt = Date()
+    let result = executor.execute(
+      DevicectlCommandInvocation(
+        arguments: ["-c", "sleep 5 & wait"],
+        environmentOverrides: [:],
+        timeoutSeconds: 0.05
+      )
+    )
+    let elapsed = Date().timeIntervalSince(startedAt)
+
+    guard case .timedOut = result else {
+      return XCTFail("Expected the bounded executor to report timeout.")
+    }
+    XCTAssertLessThan(elapsed, 1.5)
+  }
+
+  func testProductionExecutorForcesATermIgnoringProcessWithoutReadingRunningStatus() {
+    let executor = FoundationDevicectlCommandExecutor(
+      executableURL: URL(fileURLWithPath: "/bin/sh")
+    )
+    let startedAt = Date()
+    let result = executor.execute(
+      DevicectlCommandInvocation(
+        arguments: ["-c", "trap '' TERM; while :; do :; done"],
+        environmentOverrides: [:],
+        timeoutSeconds: 0.05
+      )
+    )
+    let elapsed = Date().timeIntervalSince(startedAt)
+
+    guard case .timedOut = result else {
+      return XCTFail("Expected the TERM-ignoring process to time out.")
+    }
+    XCTAssertLessThan(elapsed, 1.5)
   }
 
   func testTimedOutDevicectlResultMapsToTimedOutWithoutClaimingClear() async throws {

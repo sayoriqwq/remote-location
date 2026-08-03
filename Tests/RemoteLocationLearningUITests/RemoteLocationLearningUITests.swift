@@ -684,6 +684,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
 
     XCTAssertTrue(picker.waitForExistence(timeout: 5))
     XCTAssertTrue(map.waitForExistence(timeout: 5))
+    XCTAssertEqual(map.label, "Map center")
     XCTAssertTrue(selectMapCenter.waitForExistence(timeout: 5))
     XCTAssertTrue(done.waitForExistence(timeout: 5))
     XCTAssertFalse(app.staticTexts["map-visible-range"].exists)

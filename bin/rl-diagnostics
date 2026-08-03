@@ -9,6 +9,7 @@ else
 end
 
 set --local record_path "$diagnostics_directory/mac-controller.jsonl"
+set --local metadata_path "$diagnostics_directory/mac-controller.metadata.json"
 argparse 'p/path' 'c/copy-to=' -- $argv
 or exit 2
 
@@ -18,8 +19,8 @@ if set --query _flag_path
 end
 
 if set --query _flag_copy_to
-    if not test -f $record_path
-        echo "Mac diagnostic record does not exist: $record_path" >&2
+    if not test -f $record_path; or not test -f $metadata_path
+        echo "Mac diagnostic package does not exist in: $diagnostics_directory" >&2
         exit 1
     end
     mkdir -p -- $_flag_copy_to
@@ -27,7 +28,9 @@ if set --query _flag_copy_to
     set --local destination "$_flag_copy_to/mac-controller.jsonl"
     cp -- $record_path $destination
     or exit $status
-    echo $destination
+    cp -- $metadata_path "$_flag_copy_to/mac-controller.metadata.json"
+    or exit $status
+    echo $_flag_copy_to
     exit 0
 end
 

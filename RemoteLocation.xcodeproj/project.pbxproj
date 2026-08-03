@@ -23,6 +23,7 @@
 		5DC62CDA96B694F6627A452C /* Pairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E9B5F7C500D71F989B5E56 /* Pairing.swift */; };
 		7B9E245DAE2A540E53D4AB82 /* ManualSimulationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */; };
 		86CE37803A3E141431AAE412 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8BD8BE733CD1A04C9F08C354 /* InfoPlist.strings */; };
+		87CBDCEE4A1B98B261127A5B /* SimulationDiagnosticPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB68D3C145392450ACCDC35 /* SimulationDiagnosticPipeline.swift */; };
 		91DF5D1DB1E4E7402B47AD52 /* ControllerLinkState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC4365BC86EB9D3D4AB863 /* ControllerLinkState.swift */; };
 		A486C38F99D371F613F6AF96 /* ControllerAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5C50FBB1259E83FEE3E985 /* ControllerAuthorization.swift */; };
 		AAB946F25198A1BE77307C2F /* LocationObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A563353D69C294888044F5 /* LocationObserver.swift */; };
@@ -74,6 +75,7 @@
 		95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationDomain.swift; sourceTree = "<group>"; };
 		97E1639C289985F459B054A4 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerViewModel.swift; sourceTree = "<group>"; };
+		9FB68D3C145392450ACCDC35 /* SimulationDiagnosticPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationDiagnosticPipeline.swift; sourceTree = "<group>"; };
 		AD15D03E1892DCB2665B33D6 /* SavedLocationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedLocationStore.swift; sourceTree = "<group>"; };
 		B58E3D125202907D83021C13 /* SimulationDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationDiagnostics.swift; sourceTree = "<group>"; };
 		C05D2783175B6663C53E3079 /* RemoteLocationLearning.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RemoteLocationLearning.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -157,13 +159,14 @@
 				CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */,
 				DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */,
 				8BD8BE733CD1A04C9F08C354 /* InfoPlist.strings */,
+				8B7FDC8186DDB1CE4AD254C3 /* Localizable.strings */,
 				81A563353D69C294888044F5 /* LocationObserver.swift */,
 				684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */,
 				9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */,
 				F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */,
 				AD15D03E1892DCB2665B33D6 /* SavedLocationStore.swift */,
+				9FB68D3C145392450ACCDC35 /* SimulationDiagnosticPipeline.swift */,
 				2B5953299B034AD5EF3F392B /* SimulationDiagnosticsViewModel.swift */,
-				8B7FDC8186DDB1CE4AD254C3 /* Localizable.strings */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -266,6 +269,7 @@
 				};
 			};
 			buildConfigurationList = 2F427840287D89CA6A269C41 /* Build configuration list for PBXProject "RemoteLocation" */;
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -276,7 +280,6 @@
 			mainGroup = AB0D9B068CA8919C7795A0E8;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = C93EE8C4A52554FF74F12E1E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -334,6 +337,7 @@
 				4A3179EDCDE3AD836C6B78D6 /* RemoteLocationLearningApp.swift in Sources */,
 				E633774929757BF244D2C4EE /* SavedLocation.swift in Sources */,
 				F84692E77EA6524D49745920 /* SavedLocationStore.swift in Sources */,
+				87CBDCEE4A1B98B261127A5B /* SimulationDiagnosticPipeline.swift in Sources */,
 				2809B0FA93874D6C019A5EEC /* SimulationDiagnostics.swift in Sources */,
 				12809ECEE10873926AFA3700 /* SimulationDiagnosticsViewModel.swift in Sources */,
 				0424120E78793B82A9C0EEFC /* TLSControllerServer.swift in Sources */,

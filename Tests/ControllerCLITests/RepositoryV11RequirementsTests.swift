@@ -23,16 +23,62 @@ final class RepositoryV11RequirementsTests: XCTestCase {
     }
   }
 
-  func testDiagnosticsHelperLocatesOrCopiesTheMacRecordWithoutRunningRecovery() throws {
+  func testDiagnosticsHelperLocatesOrCopiesTheMacPackageWithoutRunningRecovery() throws {
     let helperURL = repositoryRoot.appending(path: "bin/rl-diagnostics")
     XCTAssertTrue(FileManager.default.isExecutableFile(atPath: helperURL.path))
     let contents = try String(contentsOf: helperURL, encoding: .utf8)
 
     XCTAssertTrue(contents.contains("mac-controller.jsonl"))
+    XCTAssertTrue(contents.contains("mac-controller.metadata.json"))
     XCTAssertTrue(contents.contains("_flag_copy_to"))
     XCTAssertFalse(contents.contains("rl-reset"))
     XCTAssertFalse(contents.contains("devicectl"))
     XCTAssertFalse(contents.contains("xcrun"))
+  }
+
+  func testDiagnosticsCopyIncludesParseableMetadataAndEvents() throws {
+    let source = temporaryDirectory()
+    let destination = temporaryDirectory()
+    defer {
+      try? FileManager.default.removeItem(at: source)
+      try? FileManager.default.removeItem(at: destination)
+    }
+    let event = "{\"schemaVersion\":1,\"kind\":\"controller.devicectl.started\"}\\n"
+    let metadata = "{\"schemaVersion\":1,\"generationID\":\"00000000-0000-0000-0000-000000000001\"}"
+    try event.data(using: .utf8)!.write(
+      to: source.appendingPathComponent("mac-controller.jsonl")
+    )
+    try metadata.data(using: .utf8)!.write(
+      to: source.appendingPathComponent("mac-controller.metadata.json")
+    )
+
+    let process = Process()
+    process.executableURL = repositoryRoot.appending(path: "bin/rl-diagnostics")
+    process.arguments = ["--copy-to", destination.path]
+    process.environment = [
+      "PATH": "/etc/profiles/per-user/sayori/bin:/usr/bin:/bin",
+      "REMOTE_LOCATION_DIAGNOSTICS_DIRECTORY": source.path,
+    ]
+    try process.run()
+    process.waitUntilExit()
+    XCTAssertEqual(process.terminationStatus, 0)
+
+    let copiedMetadata = try Data(contentsOf: destination.appendingPathComponent(
+      "mac-controller.metadata.json"
+    ))
+    let copiedEvents = try String(contentsOf: destination.appendingPathComponent(
+      "mac-controller.jsonl"
+    ), encoding: .utf8)
+    let object = try JSONSerialization.jsonObject(with: copiedMetadata) as? [String: Any]
+    XCTAssertEqual(object?["schemaVersion"] as? Int, 1)
+    XCTAssertNotNil(object?["generationID"] as? String)
+    XCTAssertTrue(copiedEvents.contains("controller.devicectl.started"))
+  }
+
+  private func temporaryDirectory() -> URL {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try! FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    return directory
   }
 
   func testInstallWorkflowIsExplicitAndNeverUsesAnAllowAllKeyACL() throws {
