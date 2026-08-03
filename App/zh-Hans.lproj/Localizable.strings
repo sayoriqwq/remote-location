@@ -5,6 +5,17 @@
 "%@ m" = "%@ 米";
 "Switch to Simplified Chinese" = "切换到简体中文";
 "Switch to English" = "切换到英文";
+"Test Diagnostics" = "测试诊断";
+"Local evidence only. Diagnostics never retries, clears, or changes simulation state." = "仅记录本地证据。诊断不会重试、清除或改变模拟状态。";
+"Record status" = "记录状态";
+"Enabled" = "已启用";
+"Approximate size" = "大致大小";
+"Events" = "事件数";
+"Exporting…" = "正在导出…";
+"Export Diagnostics" = "导出诊断记录";
+"Clear Diagnostics" = "清除诊断记录";
+"The diagnostic record could not be exported." = "无法导出诊断记录。";
+"The diagnostic record could not be cleared." = "无法清除诊断记录。";
 
 /* Mac controller */
 "Mac Controller" = "Mac 模拟控制器";

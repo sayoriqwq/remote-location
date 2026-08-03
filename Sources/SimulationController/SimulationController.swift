@@ -1,5 +1,6 @@
 import Foundation
 import LocationDomain
+import SimulationDiagnostics
 
 public enum InjectionBackendFailure: Error, Equatable, Sendable {
   case noActiveDevice
@@ -41,13 +42,19 @@ public enum SimulationControllerStatus: Equatable, Sendable {
 
 public actor SimulationController {
   private let backend: any InjectionBackend
+  private let diagnostics: SimulationDiagnosticRecorder?
   private var currentStatus: SimulationControllerStatus = .unavailable(.sessionNotReady)
 
-  public init(backend: any InjectionBackend) {
+  public init(
+    backend: any InjectionBackend,
+    diagnostics: SimulationDiagnosticRecorder? = nil
+  ) {
     self.backend = backend
+    self.diagnostics = diagnostics
   }
 
   public func status() async -> SimulationControllerStatus {
+    await record(kind: "controller.status.requested")
     if case .unavailable(.sessionNotReady) = currentStatus {
       switch await backend.readiness() {
       case .ready:
@@ -56,6 +63,10 @@ public actor SimulationController {
         currentStatus = .unavailable(reason)
       }
     }
+    await record(
+      kind: "controller.status.result",
+      fields: statusFields(currentStatus)
+    )
     return currentStatus
   }
 
@@ -63,10 +74,17 @@ public actor SimulationController {
     _ location: SelectedLocation,
     requestID: UUID = UUID()
   ) async -> InjectionBackendResult {
+    await record(
+      kind: "controller.apply.started",
+      requestID: requestID,
+      fields: coordinateFields(location)
+    )
     switch await backend.readiness() {
     case .unavailable(let reason):
       currentStatus = .failed(requestID: requestID, reason: reason)
-      return .failed(requestID: requestID, reason: reason)
+      let result = InjectionBackendResult.failed(requestID: requestID, reason: reason)
+      await recordResult(result, kind: "controller.apply.backend-response")
+      return result
     case .ready:
       break
     }
@@ -80,10 +98,12 @@ public actor SimulationController {
     case .failed(let responseID, let reason):
       currentStatus = .failed(requestID: responseID, reason: reason)
     }
+    await recordResult(result, kind: "controller.apply.backend-response")
     return result
   }
 
   public func stop(requestID: UUID = UUID()) async -> InjectionBackendResult {
+    await record(kind: "controller.stop.started", requestID: requestID)
     let result = await backend.execute(.clear(requestID: requestID))
     switch result {
     case .cleared:
@@ -93,7 +113,74 @@ public actor SimulationController {
     case .failed(let responseID, let reason):
       currentStatus = .failed(requestID: responseID, reason: reason)
     }
+    await recordResult(result, kind: "controller.stop.backend-response")
     return result
+  }
+
+  private func record(
+    kind: String,
+    requestID: UUID? = nil,
+    fields: SimulationDiagnosticFields = [:]
+  ) async {
+    guard let diagnostics else { return }
+    await diagnostics.record(kind: kind, requestID: requestID, fields: fields)
+  }
+
+  private func recordResult(
+    _ result: InjectionBackendResult,
+    kind: String
+  ) async {
+    var fields: SimulationDiagnosticFields = [:]
+    switch result {
+    case .applied(_, let location):
+      fields["outcome"] = .text("applied")
+      fields.merge(coordinateFields(location)) { _, new in new }
+    case .cleared:
+      fields["outcome"] = .text("cleared")
+    case .failed(_, let reason):
+      fields["outcome"] = .text("failed")
+      fields["reason"] = .text(String(describing: reason))
+    }
+    await record(kind: kind, requestID: result.requestID, fields: fields)
+  }
+
+  private func coordinateFields(_ location: SelectedLocation) -> SimulationDiagnosticFields {
+    [
+      "latitude": .number(location.latitude),
+      "longitude": .number(location.longitude),
+    ]
+  }
+
+  private func statusFields(_ status: SimulationControllerStatus) -> SimulationDiagnosticFields {
+    switch status {
+    case .unavailable(let reason):
+      return [
+        "state": .text("unavailable"),
+        "reason": .text(String(describing: reason)),
+      ]
+    case .ready:
+      return ["state": .text("ready")]
+    case .applied(_, let location):
+      var fields = ["state": SimulationDiagnosticValue.text("applied")]
+      fields.merge(coordinateFields(location)) { _, new in new }
+      return fields
+    case .stopped:
+      return ["state": .text("stopped")]
+    case .failed(_, let reason):
+      return [
+        "state": .text("failed"),
+        "reason": .text(String(describing: reason)),
+      ]
+    }
+  }
+}
+
+private extension InjectionBackendResult {
+  var requestID: UUID {
+    switch self {
+    case .applied(let requestID, _), .cleared(let requestID), .failed(let requestID, _):
+      requestID
+    }
   }
 }
 

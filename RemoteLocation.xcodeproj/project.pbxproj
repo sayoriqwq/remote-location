@@ -28,6 +28,8 @@
 		AFDABC47C65E35DB76440064 /* BonjourControllerDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D01ADB65B3135833CB6B1EC /* BonjourControllerDiscovery.swift */; };
 		B5DA7DFDC30CE2A3FC82AE08 /* LocationSelectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70085091723FA515C299CE6 /* LocationSelectionState.swift */; };
 		CA7940E553250C41E4C9DD7E /* LocationDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95CD0A0C359DAC0C72552BCF /* LocationDomain.swift */; };
+		C3D7A11F1C7D4D9EA3E2B5C8 /* SimulationDiagnosticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A2C1D0E9B84756A4C3D2E1 /* SimulationDiagnosticsViewModel.swift */; };
+		D1E4F2A8B6C94F77A10D3E5B /* SimulationDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B3C2D1F0A95867B5D4C3A2 /* SimulationDiagnostics.swift */; };
 		D21A656437608A901C7E3359 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8B7FDC8186DDB1CE4AD254C3 /* Localizable.strings */; };
 		D52611A0DC8B95B20174F71F /* ControllerTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD5DF52927D1D5FE89694F1 /* ControllerTrust.swift */; };
 		DBA9472FBD63FC421A22C6F3 /* NetworkControllerLinkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 243B501AE445B272F30524A7 /* NetworkControllerLinkTransport.swift */; };
@@ -73,9 +75,11 @@
 		C70085091723FA515C299CE6 /* LocationSelectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSelectionState.swift; sourceTree = "<group>"; };
 		CA4971E6986AC5E4D1A1C9F8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DA8739B4A2BD9144A4754C4C /* ControllerLinkViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerLinkViewModel.swift; sourceTree = "<group>"; };
+		E4B3C2D1F0A95867B5D4C3A2 /* SimulationDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationDiagnostics.swift; sourceTree = "<group>"; };
 		ECC21F0D2D4600F40A328F3E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EFACA599FE341A79901ABFD2 /* ControllerCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerCommand.swift; sourceTree = "<group>"; };
 		F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteLocationLearningApp.swift; sourceTree = "<group>"; };
+		F3A2C1D0E9B84756A4C3D2E1 /* SimulationDiagnosticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationDiagnosticsViewModel.swift; sourceTree = "<group>"; };
 		FF94DD13B7AE6AC2A17959A0 /* TLSControllerServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TLSControllerServer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -112,6 +116,7 @@
 			children = (
 				2053433383E3F2F46A18A872 /* ControllerLink */,
 				C7978236EBDC6073EA77FD0A /* LocationDomain */,
+				A1B2C3D4E5F60718293A4B5C /* SimulationDiagnostics */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -144,6 +149,7 @@
 				81A563353D69C294888044F5 /* LocationObserver.swift */,
 				684624D5D39DBB2BF5B5241C /* LocationPickerView.swift */,
 				9BC397A60889A8628C817645 /* LocationPickerViewModel.swift */,
+				F3A2C1D0E9B84756A4C3D2E1 /* SimulationDiagnosticsViewModel.swift */,
 				F80C50201FFD0E312184A3B0 /* RemoteLocationLearningApp.swift */,
 			);
 			path = App;
@@ -177,6 +183,14 @@
 				57D51375A3CB3DE18FF8E61C /* ManualSimulationSession.swift */,
 			);
 			path = LocationDomain;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60718293A4B5C /* SimulationDiagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				E4B3C2D1F0A95867B5D4C3A2 /* SimulationDiagnostics.swift */,
+			);
+			path = SimulationDiagnostics;
 			sourceTree = "<group>";
 		};
 		C93EE8C4A52554FF74F12E1E /* Products */ = {
@@ -311,6 +325,8 @@
 				7B9E245DAE2A540E53D4AB82 /* ManualSimulationSession.swift in Sources */,
 				DBA9472FBD63FC421A22C6F3 /* NetworkControllerLinkTransport.swift in Sources */,
 				5DC62CDA96B694F6627A452C /* Pairing.swift in Sources */,
+				D1E4F2A8B6C94F77A10D3E5B /* SimulationDiagnostics.swift in Sources */,
+				C3D7A11F1C7D4D9EA3E2B5C8 /* SimulationDiagnosticsViewModel.swift in Sources */,
 				4A3179EDCDE3AD836C6B78D6 /* RemoteLocationLearningApp.swift in Sources */,
 				0424120E78793B82A9C0EEFC /* TLSControllerServer.swift in Sources */,
 				170FE9E57A66954667B8B70A /* TrustedControllerLink.swift in Sources */,

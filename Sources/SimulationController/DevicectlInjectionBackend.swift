@@ -1,21 +1,52 @@
 import Foundation
 import LocationDomain
+import SimulationDiagnostics
 
 public struct DevicectlCommandInvocation: Equatable, Sendable {
   public let arguments: [String]
   public let environmentOverrides: [String: String]
+  public let timeoutSeconds: TimeInterval
 
   public init(
     arguments: [String],
-    environmentOverrides: [String: String]
+    environmentOverrides: [String: String],
+    timeoutSeconds: TimeInterval = 15
   ) {
     self.arguments = arguments
     self.environmentOverrides = environmentOverrides
+    self.timeoutSeconds = timeoutSeconds
+  }
+}
+
+public struct DevicectlCommandExecutionDetails: Equatable, Sendable {
+  public let launchSucceeded: Bool
+  public let exitStatus: Int32?
+  public let duration: TimeInterval
+  public let standardOutput: String
+  public let standardError: String
+
+  public init(
+    launchSucceeded: Bool,
+    exitStatus: Int32?,
+    duration: TimeInterval,
+    standardOutput: String = "",
+    standardError: String = ""
+  ) {
+    self.launchSucceeded = launchSucceeded
+    self.exitStatus = exitStatus
+    self.duration = duration
+    self.standardOutput = standardOutput
+    self.standardError = standardError
   }
 }
 
 public enum DevicectlCommandExecutionResult: Equatable, Sendable {
+  /// Legacy fake-executor result retained for the existing stable seam.
   case exited(Int32)
+  case completed(DevicectlCommandExecutionDetails)
+  case timedOut(DevicectlCommandExecutionDetails)
+  case launchFailed(DevicectlCommandExecutionDetails)
+  /// Legacy launch-failure result retained for the existing stable seam.
   case failedToLaunch
 }
 
@@ -52,6 +83,7 @@ public struct FoundationDevicectlCommandExecutor: DevicectlCommandExecuting {
   public func execute(
     _ invocation: DevicectlCommandInvocation
   ) -> DevicectlCommandExecutionResult {
+    let startedAt = Date()
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
     process.arguments = invocation.arguments
@@ -61,18 +93,66 @@ public struct FoundationDevicectlCommandExecutor: DevicectlCommandExecuting {
       overrides: invocation.environmentOverrides
     )
 
-    // devicectl output can contain device identifiers. The backend exposes only
-    // stable domain status and never forwards raw tool output to the app or logs.
-    process.standardOutput = FileHandle.nullDevice
-    process.standardError = FileHandle.nullDevice
+    let standardOutput = Pipe()
+    let standardError = Pipe()
+    process.standardOutput = standardOutput
+    process.standardError = standardError
 
     do {
       try process.run()
     } catch {
-      return .failedToLaunch
+      return .launchFailed(
+        DevicectlCommandExecutionDetails(
+          launchSucceeded: false,
+          exitStatus: nil,
+          duration: Date().timeIntervalSince(startedAt),
+          standardError: String(describing: error)
+        )
+      )
     }
-    process.waitUntilExit()
-    return .exited(process.terminationStatus)
+
+    let outputData = LockedData()
+    let errorData = LockedData()
+    let readers = DispatchGroup()
+    readers.enter()
+    DispatchQueue.global(qos: .utility).async {
+      outputData.replace(standardOutput.fileHandleForReading.readDataToEndOfFile())
+      readers.leave()
+    }
+    readers.enter()
+    DispatchQueue.global(qos: .utility).async {
+      errorData.replace(standardError.fileHandleForReading.readDataToEndOfFile())
+      readers.leave()
+    }
+
+    let waiter = DispatchSemaphore(value: 0)
+    DispatchQueue.global(qos: .utility).async {
+      process.waitUntilExit()
+      waiter.signal()
+    }
+
+    let timeout = max(0.001, invocation.timeoutSeconds)
+    let timedOut = waiter.wait(timeout: .now() + timeout) == .timedOut
+    if timedOut {
+      process.terminate()
+      process.waitUntilExit()
+    }
+    readers.wait()
+
+    let details = DevicectlCommandExecutionDetails(
+      launchSucceeded: true,
+      exitStatus: process.terminationStatus,
+      duration: Date().timeIntervalSince(startedAt),
+      standardOutput: String(
+        data: outputData.value(),
+        encoding: .utf8
+      ) ?? "",
+      standardError: String(
+        data: errorData.value(),
+        encoding: .utf8
+      ) ?? ""
+    )
+    return timedOut ? .timedOut(details) : .completed(details)
   }
 }
 
@@ -82,79 +162,225 @@ public actor DevicectlInjectionBackend: InjectionBackend {
   private let device: String
   private let developerDirectory: String
   private let executor: any DevicectlCommandExecuting
+  private let diagnostics: SimulationDiagnosticRecorder?
 
   public init(
     device: String,
     developerDirectory: String = "/Applications/Xcode-beta.app/Contents/Developer",
-    executor: any DevicectlCommandExecuting = FoundationDevicectlCommandExecutor()
+    executor: any DevicectlCommandExecuting = FoundationDevicectlCommandExecutor(),
+    diagnostics: SimulationDiagnosticRecorder? = nil
   ) {
     self.device = device.trimmingCharacters(in: .whitespacesAndNewlines)
     self.developerDirectory = developerDirectory
     self.executor = executor
+    self.diagnostics = diagnostics
   }
 
-  public func readiness() -> InjectionBackendReadiness {
+  public func readiness() async -> InjectionBackendReadiness {
     guard !device.isEmpty else {
       return .unavailable(.noActiveDevice)
     }
 
-    switch run(
+    let result = await run(
       [
         "devicectl", "device", "simulate", "location", "list",
         "--device", device,
         "--quiet", "--timeout", Self.timeoutSeconds,
-      ]
-    ) {
+      ],
+      commandKind: "readiness"
+    )
+    switch result {
     case .exited(0):
       return .ready
-    case .exited, .failedToLaunch:
+    case .completed(let details) where details.exitStatus == 0:
+      return .ready
+    case .timedOut:
+      return .unavailable(.timedOut)
+    case .exited, .completed, .launchFailed, .failedToLaunch:
       return .unavailable(.backendUnavailable)
     }
   }
 
-  public func execute(_ command: InjectionBackendCommand) -> InjectionBackendResult {
+  public func execute(_ command: InjectionBackendCommand) async -> InjectionBackendResult {
     guard !device.isEmpty else {
       return .failed(requestID: command.requestID, reason: .noActiveDevice)
     }
 
     switch command {
     case .apply(let requestID, let location):
-      let result = run(
+      let result = await run(
         [
           "devicectl", "device", "simulate", "location", "coordinate",
           "--device", device,
           "--latitude=\(format(location.latitude))",
           "--longitude=\(format(location.longitude))",
           "--quiet", "--timeout", Self.timeoutSeconds,
-        ]
+        ],
+        commandKind: "apply",
+        requestID: requestID
       )
-      guard result == .exited(0) else {
+      guard isSuccessful(result) else {
+        if isTimedOut(result) {
+          return .failed(requestID: requestID, reason: .timedOut)
+        }
         return .failed(requestID: requestID, reason: .backendUnavailable)
       }
       return .applied(requestID: requestID, location: location)
 
     case .clear(let requestID):
-      let result = run(
+      let result = await run(
         [
           "devicectl", "device", "simulate", "location", "clear",
           "--device", device,
           "--quiet", "--timeout", Self.timeoutSeconds,
-        ]
+        ],
+        commandKind: "clear",
+        requestID: requestID
       )
-      guard result == .exited(0) else {
+      guard isSuccessful(result) else {
+        if isTimedOut(result) {
+          return .failed(requestID: requestID, reason: .timedOut)
+        }
         return .failed(requestID: requestID, reason: .clearFailed)
       }
       return .cleared(requestID: requestID)
     }
   }
 
-  private func run(_ arguments: [String]) -> DevicectlCommandExecutionResult {
-    executor.execute(
-      DevicectlCommandInvocation(
-        arguments: arguments,
-        environmentOverrides: ["DEVELOPER_DIR": developerDirectory]
+  private func run(
+    _ arguments: [String],
+    commandKind: String,
+    requestID: UUID? = nil
+  ) async -> DevicectlCommandExecutionResult {
+    let invocation = DevicectlCommandInvocation(
+      arguments: arguments,
+      environmentOverrides: ["DEVELOPER_DIR": developerDirectory],
+      timeoutSeconds: Double(Self.timeoutSeconds) ?? 15
+    )
+    let startedAt = Date()
+    await record(
+      kind: "controller.devicectl.started",
+      requestID: requestID,
+      fields: invocationFields(invocation, commandKind: commandKind)
+    )
+    let result = executor.execute(invocation)
+    let duration: TimeInterval
+    switch result {
+    case .completed(let details), .timedOut(let details):
+      duration = details.duration
+    case .exited, .failedToLaunch:
+      duration = Date().timeIntervalSince(startedAt)
+    case .launchFailed(let details):
+      duration = details.duration
+    }
+    await record(
+      kind: "controller.devicectl.finished",
+      requestID: requestID,
+      fields: resultFields(
+        result,
+        commandKind: commandKind,
+        duration: duration
       )
     )
+    return result
+  }
+
+  private func record(
+    kind: String,
+    requestID: UUID?,
+    fields: SimulationDiagnosticFields
+  ) async {
+    guard let diagnostics else { return }
+    await diagnostics.record(kind: kind, requestID: requestID, fields: fields)
+  }
+
+  private func invocationFields(
+    _ invocation: DevicectlCommandInvocation,
+    commandKind: String
+  ) -> SimulationDiagnosticFields {
+    [
+      "commandKind": .text(commandKind),
+      "arguments": .array(
+        DevicectlDiagnosticRedactor.arguments(
+          invocation.arguments,
+          selector: device
+        )
+      ),
+      "developerDirectory": .text(
+        invocation.environmentOverrides["DEVELOPER_DIR"] ?? developerDirectory
+      ),
+      "device": .text(DevicectlDiagnosticRedactor.placeholder),
+      "timeoutSeconds": .number(invocation.timeoutSeconds),
+    ]
+  }
+
+  private func resultFields(
+    _ result: DevicectlCommandExecutionResult,
+    commandKind: String,
+    duration: TimeInterval
+  ) -> SimulationDiagnosticFields {
+    var fields: SimulationDiagnosticFields = [
+      "commandKind": .text(commandKind),
+      "durationSeconds": .number(duration),
+    ]
+    switch result {
+    case .exited(let status):
+      fields["launchResult"] = .text("launched")
+      fields["exitStatus"] = .integer(Int64(status))
+      fields["outcome"] = .text(status == 0 ? "success" : "nonzero-exit")
+    case .completed(let details):
+      fields["launchResult"] = .text(details.launchSucceeded ? "launched" : "failed")
+      if let status = details.exitStatus {
+        fields["exitStatus"] = .integer(Int64(status))
+      }
+      fields["outcome"] = .text(details.exitStatus == 0 ? "success" : "nonzero-exit")
+      addFailureOutput(from: details, selector: device, to: &fields)
+    case .timedOut(let details):
+      fields["launchResult"] = .text(details.launchSucceeded ? "launched" : "failed")
+      if let status = details.exitStatus {
+        fields["exitStatus"] = .integer(Int64(status))
+      }
+      fields["outcome"] = .text("timeout")
+      addFailureOutput(from: details, selector: device, to: &fields)
+    case .launchFailed(let details):
+      fields["launchResult"] = .text("failed")
+      fields["outcome"] = .text("launch-failed")
+      addFailureOutput(from: details, selector: device, to: &fields)
+    case .failedToLaunch:
+      fields["launchResult"] = .text("failed")
+      fields["outcome"] = .text("launch-failed")
+    }
+    return fields
+  }
+
+  private func addFailureOutput(
+    from details: DevicectlCommandExecutionDetails,
+    selector: String,
+    to fields: inout SimulationDiagnosticFields
+  ) {
+    if !details.standardOutput.isEmpty {
+      fields["standardOutput"] = .text(
+        DevicectlDiagnosticRedactor.text(details.standardOutput, selector: selector)
+      )
+    }
+    if !details.standardError.isEmpty {
+      fields["standardError"] = .text(
+        DevicectlDiagnosticRedactor.text(details.standardError, selector: selector)
+      )
+    }
+  }
+
+  private func isSuccessful(_ result: DevicectlCommandExecutionResult) -> Bool {
+    switch result {
+    case .exited(0): true
+    case .completed(let details): details.exitStatus == 0
+    case .exited, .timedOut, .launchFailed, .failedToLaunch: false
+    }
+  }
+
+  private func isTimedOut(_ result: DevicectlCommandExecutionResult) -> Bool {
+    if case .timedOut = result { return true }
+    return false
   }
 
   private func format(_ coordinate: Double) -> String {
@@ -166,11 +392,59 @@ public actor DevicectlInjectionBackend: InjectionBackend {
   }
 }
 
+private enum DevicectlDiagnosticRedactor {
+  static let placeholder = "<redacted-device>"
+
+  // Only the configured selector is replaced. The request ID remains in the
+  // diagnostic envelope and unrelated failure text remains useful.
+  static func text(_ value: String, selector: String) -> String {
+    guard !selector.isEmpty else { return value }
+    return value.replacingOccurrences(of: selector, with: placeholder)
+  }
+
+  static func arguments(
+    _ arguments: [String],
+    selector: String
+  ) -> [SimulationDiagnosticValue] {
+    var redacted: [SimulationDiagnosticValue] = []
+    var index = 0
+    while index < arguments.count {
+      let argument = arguments[index]
+      if argument == "--device", index + 1 < arguments.count {
+        redacted.append(.text(argument))
+        redacted.append(.text(placeholder))
+        index += 2
+      } else {
+        redacted.append(.text(text(argument, selector: selector)))
+        index += 1
+      }
+    }
+    return redacted
+  }
+}
+
 extension InjectionBackendCommand {
   fileprivate var requestID: UUID {
     switch self {
     case .apply(let requestID, _), .clear(let requestID):
       requestID
     }
+  }
+}
+
+private final class LockedData: @unchecked Sendable {
+  private let lock = NSLock()
+  private var data = Data()
+
+  func replace(_ data: Data) {
+    lock.lock()
+    self.data = data
+    lock.unlock()
+  }
+
+  func value() -> Data {
+    lock.lock()
+    defer { lock.unlock() }
+    return data
   }
 }

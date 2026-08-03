@@ -330,9 +330,18 @@ public struct RemoteLocationControllerCommand: AsyncParsableCommand {
           identity: identity,
           expiresAt: Date().addingTimeInterval(pairingCodeValiditySeconds)
         )
+        let diagnostics = ControllerCLIRuntime.makeDiagnostics()
+        await diagnostics.record(
+          kind: "controller.lifecycle.startup-attempted",
+          fields: ["developerDirectory": .text(
+            activeDevice.developerDirectory
+              ?? ControllerCLIRuntime.defaultDeveloperDirectory
+          )]
+        )
         let simulationController = ControllerCLIRuntime.makeController(
           device: activeDevice.device,
-          developerDirectory: activeDevice.developerDirectory
+          developerDirectory: activeDevice.developerDirectory,
+          diagnostics: diagnostics
         )
         let session = ControllerServerSession(
           identity: identity,
@@ -342,11 +351,22 @@ public struct RemoteLocationControllerCommand: AsyncParsableCommand {
             account: "paired-learning-app"
           ),
           commandHandler: SimulationControllerCommandHandler(
-            controller: simulationController
-          )
+            controller: simulationController,
+            diagnostics: diagnostics
+          ),
+          diagnostics: diagnostics
         )
         let server = TLSControllerServer(identity: tlsIdentity, session: session)
-        try await server.start()
+        do {
+          try await server.start()
+        } catch {
+          await diagnostics.record(
+            kind: "controller.lifecycle.startup-failed",
+            fields: ["error": .text(String(describing: error))]
+          )
+          throw error
+        }
+        await diagnostics.record(kind: "controller.lifecycle.ready")
         defer { server.stop() }
 
         let privateCodeFile = try pairingCodeFile.map {
@@ -367,6 +387,7 @@ public struct RemoteLocationControllerCommand: AsyncParsableCommand {
         try await ControllerCLIRuntime.runServeLifecycle(
           seconds: seconds,
           controller: simulationController,
+          diagnostics: diagnostics,
           report: { result in
             print("Controller exit cleanup: \(result.output)")
           }

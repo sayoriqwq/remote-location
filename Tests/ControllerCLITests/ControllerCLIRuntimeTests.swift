@@ -1,5 +1,6 @@
 import ControllerLink
 import Foundation
+import SimulationDiagnostics
 import SimulationController
 import XCTest
 
@@ -7,6 +8,13 @@ import XCTest
 
 final class ControllerCLIRuntimeTests: XCTestCase {
   func testServeLifecycleNormalCompletionResetsOnceAndReportsResult() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("remote-location-serve-events-(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let diagnostics = SimulationDiagnosticRecorder(
+      side: .macController,
+      directory: directory
+    )
     let backend = ServeLifecycleRecordingBackend()
     let controller = SimulationController(backend: backend)
     let reports = ServeLifecycleReports()
@@ -15,6 +23,7 @@ final class ControllerCLIRuntimeTests: XCTestCase {
       seconds: 60,
       controller: controller,
       sleep: { _ in },
+      diagnostics: diagnostics,
       report: { result in await reports.append(result) }
     )
 
@@ -24,6 +33,49 @@ final class ControllerCLIRuntimeTests: XCTestCase {
     XCTAssertEqual(reportedResults.count, 1)
     XCTAssertEqual(reportedResults[0].exitCode, 0)
     XCTAssertTrue(reportedResults[0].output.hasPrefix("Reset completed for request "))
+    let events = await diagnostics.events()
+    XCTAssertTrue(events.contains { $0.kind == "controller.lifecycle.serve-started" })
+    XCTAssertTrue(events.contains { $0.kind == "controller.lifecycle.shutdown-cleanup-started" })
+    XCTAssertTrue(events.contains { $0.kind == "controller.lifecycle.shutdown-cleanup-finished" })
+  }
+
+  func testServeLifecycleInterruptedCleanupIsRecordedAndStillResetsOnce() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("remote-location-serve-events-(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let diagnostics = SimulationDiagnosticRecorder(
+      side: .macController,
+      directory: directory
+    )
+    let backend = ServeLifecycleRecordingBackend()
+    let controller = SimulationController(backend: backend)
+    let reports = ServeLifecycleReports()
+
+    do {
+      try await ControllerCLIRuntime.runServeLifecycle(
+        seconds: 60,
+        controller: controller,
+        sleep: { _ in throw ServeLifecycleInterruption.cancelled },
+        diagnostics: diagnostics,
+        report: { result in await reports.append(result) }
+      )
+      XCTFail("Expected the interrupted lifecycle to rethrow")
+    } catch is ServeLifecycleInterruption {
+      // The cleanup result is reported before the interruption is rethrown.
+    }
+
+    let clearCount = await backend.clearCount
+    let reportedValues = await reports.values
+    XCTAssertEqual(clearCount, 1)
+    XCTAssertEqual(reportedValues.count, 1)
+    let events = await diagnostics.events()
+    XCTAssertTrue(
+      events.contains { $0.kind == "controller.lifecycle.interrupted-shutdown-cleanup-started" }
+    )
+    XCTAssertTrue(
+      events.contains { $0.kind == "controller.lifecycle.interrupted-shutdown-cleanup-finished" }
+    )
+    XCTAssertTrue(events.contains { $0.kind == "controller.reset.requested" })
   }
 
   func testResolvesExplicitValuesBeforeEnvironmentAndDefaults() {
@@ -135,6 +187,10 @@ private actor ServeLifecycleReports {
   func append(_ result: ControllerCLIResult) {
     values.append(result)
   }
+}
+
+private enum ServeLifecycleInterruption: Error {
+  case cancelled
 }
 
 private final class RuntimeRecordingDevicectlExecutor:

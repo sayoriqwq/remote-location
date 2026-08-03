@@ -1,0 +1,40 @@
+#!/usr/bin/env fish
+
+set --local diagnostics_directory
+if set --query REMOTE_LOCATION_DIAGNOSTICS_DIRECTORY
+    set diagnostics_directory $REMOTE_LOCATION_DIAGNOSTICS_DIRECTORY
+else
+    set --local user_home $HOME
+    set diagnostics_directory "$user_home/Library/Application Support/Pinshift/SimulationDiagnostics"
+end
+
+set --local record_path "$diagnostics_directory/mac-controller.jsonl"
+argparse 'p/path' 'c/copy-to=' -- $argv
+or exit 2
+
+if set --query _flag_path
+    echo $record_path
+    exit 0
+end
+
+if set --query _flag_copy_to
+    if not test -f $record_path
+        echo "Mac diagnostic record does not exist: $record_path" >&2
+        exit 1
+    end
+    mkdir -p -- $_flag_copy_to
+    or exit $status
+    set --local destination "$_flag_copy_to/mac-controller.jsonl"
+    cp -- $record_path $destination
+    or exit $status
+    echo $destination
+    exit 0
+end
+
+if test -f $record_path
+    echo $record_path
+    exit 0
+end
+
+echo "Mac diagnostic record does not exist: $record_path" >&2
+exit 1

@@ -1,5 +1,6 @@
 import Foundation
 import LocationDomain
+import SimulationDiagnostics
 import SimulationController
 
 public enum ControllerCLICommand: Equatable, Sendable {
@@ -21,21 +22,83 @@ public struct ControllerCLIResult: Equatable, Sendable {
 
 public struct ControllerCLIRunner: Sendable {
   private let controller: SimulationController
+  private let diagnostics: SimulationDiagnosticRecorder?
 
-  public init(controller: SimulationController) {
+  public init(
+    controller: SimulationController,
+    diagnostics: SimulationDiagnosticRecorder? = nil
+  ) {
     self.controller = controller
+    self.diagnostics = diagnostics
   }
 
   public func run(_ command: ControllerCLICommand) async -> ControllerCLIResult {
+    await diagnostics?.record(
+      kind: "controller.cli.command.started",
+      requestID: commandRequestID(command),
+      fields: commandFields(command)
+    )
+    if case .reset = command {
+      await diagnostics?.record(
+        kind: "controller.reset.requested",
+        requestID: commandRequestID(command)
+      )
+    }
+    let result: ControllerCLIResult
     switch command {
     case .status:
-      return await status()
+      result = await status()
     case .apply(let latitude, let longitude, let requestID):
-      return await apply(latitude: latitude, longitude: longitude, requestID: requestID)
+      result = await apply(latitude: latitude, longitude: longitude, requestID: requestID)
     case .stop(let requestID):
-      return await stop(requestID: requestID)
+      result = await stop(requestID: requestID)
     case .reset(let requestID):
-      return await reset(requestID: requestID)
+      result = await reset(requestID: requestID)
+    }
+    await diagnostics?.record(
+      kind: "controller.cli.command.finished",
+      requestID: commandRequestID(command),
+      fields: [
+        "exitCode": .integer(Int64(result.exitCode)),
+        "outcome": .text(result.exitCode == 0 ? "success" : "failed"),
+      ]
+    )
+    if case .reset = command {
+      await diagnostics?.record(
+        kind: "controller.reset.completed",
+        requestID: commandRequestID(command),
+        fields: [
+          "outcome": .text(result.exitCode == 0 ? "success" : "failed"),
+          "exitCode": .integer(Int64(result.exitCode)),
+        ]
+      )
+    }
+    return result
+  }
+
+  private func commandFields(_ command: ControllerCLICommand) -> SimulationDiagnosticFields {
+    switch command {
+    case .status:
+      return ["command": .text("status")]
+    case .apply(let latitude, let longitude, _):
+      return [
+        "command": .text("apply"),
+        "latitude": .text(latitude),
+        "longitude": .text(longitude),
+      ]
+    case .stop:
+      return ["command": .text("stop")]
+    case .reset:
+      return ["command": .text("reset")]
+    }
+  }
+
+  private func commandRequestID(_ command: ControllerCLICommand) -> UUID? {
+    switch command {
+    case .status:
+      nil
+    case .apply(_, _, let requestID), .stop(let requestID), .reset(let requestID):
+      requestID
     }
   }
 

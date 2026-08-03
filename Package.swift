@@ -10,6 +10,7 @@ let package = Package(
   ],
   products: [
     .library(name: "LocationDomain", targets: ["LocationDomain"]),
+    .library(name: "SimulationDiagnostics", targets: ["SimulationDiagnostics"]),
     .library(name: "ControllerLink", targets: ["ControllerLink"]),
     .library(name: "SimulationController", targets: ["SimulationController"]),
     .library(name: "ControllerCLI", targets: ["ControllerCLI"]),
@@ -26,10 +27,14 @@ let package = Package(
   ],
   targets: [
     .target(name: "LocationDomain"),
-    .target(name: "ControllerLink"),
+    .target(name: "SimulationDiagnostics"),
+    .target(
+      name: "ControllerLink",
+      dependencies: ["SimulationDiagnostics"]
+    ),
     .target(
       name: "SimulationController",
-      dependencies: ["LocationDomain"]
+      dependencies: ["LocationDomain", "SimulationDiagnostics"]
     ),
     .target(
       name: "ControllerCLI",
@@ -37,6 +42,7 @@ let package = Package(
         "ControllerLink",
         "LocationDomain",
         "SimulationController",
+        "SimulationDiagnostics",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ]
     ),
@@ -49,12 +55,16 @@ let package = Package(
       dependencies: ["LocationDomain"]
     ),
     .testTarget(
+      name: "SimulationDiagnosticsTests",
+      dependencies: ["SimulationDiagnostics"]
+    ),
+    .testTarget(
       name: "ControllerLinkTests",
-      dependencies: ["ControllerLink"]
+      dependencies: ["ControllerLink", "SimulationDiagnostics"]
     ),
     .testTarget(
       name: "SimulationControllerTests",
-      dependencies: ["SimulationController"]
+      dependencies: ["SimulationController", "SimulationDiagnostics"]
     ),
     .testTarget(
       name: "ControllerCLITests",
