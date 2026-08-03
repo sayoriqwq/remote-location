@@ -1,0 +1,311 @@
+#!/usr/bin/env fish
+
+set --local script_dir (path resolve (path dirname (status filename)))
+source $script_dir/_rl-common.fish
+or exit 1
+source $script_dir/_rl-app-signing.fish
+or exit 1
+
+argparse h/help f/force no-launch launch-only -- $argv
+or exit 2
+
+if set --query _flag_help
+    echo "Usage: rl-resign-app [--force] [--no-launch] [--launch-only]"
+    echo "Renews, verifies, and installs the Personal Team-signed Pinshift app."
+    echo "By default, renewal is skipped while more than 24 hours remain."
+    exit 0
+end
+
+if set --query _flag_launch_only; and begin
+        set --query _flag_force
+        or set --query _flag_no_launch
+    end
+    echo "--launch-only cannot be combined with --force or --no-launch." >&2
+    exit 2
+end
+
+rl_prepare_environment
+or exit $status
+
+set --local bundle_identifier dev.sayori.remotelocation.learning
+set --local project RemoteLocation.xcodeproj
+set --local scheme RemoteLocationLearning
+set --local renewal_threshold_seconds (math '24 * 60 * 60')
+
+set --local work_root (path resolve .build)
+if set --query REMOTE_LOCATION_RESIGN_WORK_ROOT
+    set work_root (path resolve "$REMOTE_LOCATION_RESIGN_WORK_ROOT")
+end
+mkdir -p "$work_root"
+or exit $status
+if test -L "$work_root"
+    echo "The resign work directory must not be a symbolic link." >&2
+    exit 1
+end
+
+set --local lock_directory "$work_root/rl-resign.lock"
+mkdir "$lock_directory" 2>/dev/null
+or begin
+    echo "Another rl-resign-app process may be running. No signing state was changed." >&2
+    exit 1
+end
+
+set --local staging_root (mktemp -d "$work_root/rl-resign-staging.XXXXXX")
+or begin
+    command rmdir "$lock_directory" 2>/dev/null
+    exit 1
+end
+chmod 700 "$staging_root"
+or exit $status
+
+set --global _rl_resign_work_root "$work_root"
+set --global _rl_resign_staging_root "$staging_root"
+set --global _rl_resign_lock_directory "$lock_directory"
+set --global _rl_resign_profiles_committed 0
+set --global _rl_resign_preserve_staging 0
+set --erase _rl_resign_moved_sources
+set --erase _rl_resign_moved_backups
+set --erase _rl_resign_backup_directory
+
+if set --query _flag_launch_only
+    rl_launch_learning_app "$REMOTE_LOCATION_DEVICE" "$bundle_identifier" "$staging_root"
+    exit $status
+end
+
+set --local profile_directories \
+    "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+    "$HOME/Library/MobileDevice/Provisioning Profiles"
+if set --query REMOTE_LOCATION_PROVISIONING_PROFILE_DIRECTORY
+    set profile_directories "$REMOTE_LOCATION_PROVISIONING_PROFILE_DIRECTORY"
+end
+set --global _rl_resign_profile_directories $profile_directories
+set --global _rl_resign_bundle_identifier "$bundle_identifier"
+
+set --local matched_profiles
+set --local old_team_identifier
+set --local old_application_prefix
+set --local old_max_expiration_epoch 0
+set --local profile_index 0
+
+for profile_directory in $profile_directories
+    if not test -d "$profile_directory"
+        continue
+    end
+    if test -L "$profile_directory"
+        echo "A provisioning-profile directory is a symbolic link; refusing to modify it." >&2
+        exit 1
+    end
+
+    set --local cached_profiles (
+        find "$profile_directory" -maxdepth 1 -name '*.mobileprovision'
+    )
+    or begin
+        echo "A provisioning-profile directory could not be inspected." >&2
+        exit 1
+    end
+
+    for profile in $cached_profiles
+        if test -L "$profile"
+            echo "A cached provisioning profile is a symbolic link; refusing to modify it." >&2
+            exit 1
+        end
+        if not test -f "$profile"
+            continue
+        end
+
+        set profile_index (math $profile_index + 1)
+        set --local decoded "$staging_root/cached-profile-$profile_index.plist"
+        rl_decode_mobileprovision "$profile" "$decoded"
+        or begin
+            echo "A cached provisioning profile could not be decoded. No signing state was changed." >&2
+            exit 1
+        end
+
+        if not rl_decoded_profile_is_ios_app "$decoded" "$bundle_identifier"
+            continue
+        end
+
+        set --local team_identifier (rl_plist_raw "$decoded" TeamIdentifier.0)
+        or exit 1
+        set --local application_prefix (
+            rl_plist_raw "$decoded" ApplicationIdentifierPrefix.0
+        )
+        or exit 1
+        set --local expiration (rl_plist_raw "$decoded" ExpirationDate)
+        or exit 1
+        set --local expiration_epoch (rl_iso8601_epoch "$expiration")
+        or begin
+            echo "A matching provisioning profile has an invalid expiration date." >&2
+            exit 1
+        end
+
+        if test -n "$old_team_identifier"; and test "$team_identifier" != "$old_team_identifier"
+            echo "Matching profiles disagree about the development team; refusing to renew." >&2
+            exit 1
+        end
+        if test -n "$old_application_prefix"; and test "$application_prefix" != "$old_application_prefix"
+            echo "Matching profiles disagree about the application prefix; refusing to renew." >&2
+            exit 1
+        end
+
+        set old_team_identifier "$team_identifier"
+        set old_application_prefix "$application_prefix"
+        set --append matched_profiles "$profile"
+        if test $expiration_epoch -gt $old_max_expiration_epoch
+            set old_max_expiration_epoch $expiration_epoch
+        end
+    end
+end
+
+if test (count $matched_profiles) -eq 0
+    echo "No existing Pinshift app profile was found." >&2
+    echo "Open Xcode and complete one signed device build before using this renewal command." >&2
+    exit 1
+end
+
+set --local now_epoch (/bin/date '+%s')
+set --local remaining_seconds (math "$old_max_expiration_epoch - $now_epoch")
+if not set --query _flag_force; and test $remaining_seconds -gt $renewal_threshold_seconds
+    echo "Pinshift remains signed until "(rl_local_expiration $old_max_expiration_epoch)"."
+    echo "More than 24 hours remain, so no rebuild or reinstall was needed."
+    exit 0
+end
+
+set --local backup_parent "$work_root/resign-profile-backups"
+mkdir -p "$backup_parent"
+or exit $status
+set --local backup_directory (mktemp -d "$backup_parent/session.XXXXXX")
+or exit $status
+chmod 700 "$backup_directory"
+or exit $status
+set --global _rl_resign_backup_directory "$backup_directory"
+
+set --local move_index 0
+for profile in $matched_profiles
+    set move_index (math $move_index + 1)
+    set --local backup_path "$backup_directory/$move_index-"(path basename "$profile")
+    mv "$profile" "$backup_path"
+    or exit $status
+    set --global --append _rl_resign_moved_sources "$profile"
+    set --global --append _rl_resign_moved_backups "$backup_path"
+end
+
+echo "Requesting a new Personal Team provisioning profile from Xcode…"
+set --local derived_data "$staging_root/DerivedData"
+set --local build_log "$staging_root/xcodebuild.log"
+xcodebuild \
+    -project "$project" \
+    -scheme "$scheme" \
+    -configuration Debug \
+    -destination 'generic/platform=iOS' \
+    -derivedDataPath "$derived_data" \
+    -allowProvisioningUpdates \
+    -allowProvisioningDeviceRegistration \
+    DEVELOPMENT_TEAM="$old_team_identifier" \
+    build >"$build_log" 2>&1
+set --local build_status $status
+if test $build_status -ne 0
+    cp "$build_log" "$backup_directory/xcodebuild.log"
+    chmod 600 "$backup_directory/xcodebuild.log"
+    if string match --quiet --regex 'No Accounts|Add a new account' -- (string collect <"$build_log")
+        echo "Xcode has no signed-in Apple Account. Sign in under Xcode → Settings → Apple Accounts." >&2
+    else
+        echo "Xcode could not create a renewed app build." >&2
+    end
+    echo "The old profile will be restored; details are kept in the local backup directory." >&2
+    exit $build_status
+end
+
+set --local candidate \
+    "$derived_data/Build/Products/Debug-iphoneos/RemoteLocationLearning.app"
+set --local embedded_profile "$candidate/embedded.mobileprovision"
+set --local info_plist "$candidate/Info.plist"
+if not test -d "$candidate"; or not test -f "$embedded_profile"; or not test -f "$info_plist"
+    echo "Xcode reported success but did not produce the expected signed app." >&2
+    exit 1
+end
+
+codesign --verify --deep --strict "$candidate" >/dev/null 2>&1
+or begin
+    echo "The candidate app failed code-signature verification and will not be installed." >&2
+    exit 1
+end
+
+set --local candidate_bundle_identifier (rl_plist_raw "$info_plist" CFBundleIdentifier)
+or exit 1
+if test "$candidate_bundle_identifier" != "$bundle_identifier"
+    echo "The candidate app has an unexpected bundle identifier and will not be installed." >&2
+    exit 1
+end
+
+set --local decoded_candidate "$staging_root/candidate-profile.plist"
+rl_decode_mobileprovision "$embedded_profile" "$decoded_candidate"
+or begin
+    echo "The candidate provisioning profile could not be decoded." >&2
+    exit 1
+end
+rl_decoded_profile_is_ios_app "$decoded_candidate" "$bundle_identifier"
+or begin
+    echo "The candidate profile does not authorize the Pinshift iOS app." >&2
+    exit 1
+end
+
+set --local new_team_identifier (rl_plist_raw "$decoded_candidate" TeamIdentifier.0)
+or exit 1
+set --local new_application_prefix (
+    rl_plist_raw "$decoded_candidate" ApplicationIdentifierPrefix.0
+)
+or exit 1
+if test "$new_team_identifier" != "$old_team_identifier"; or test "$new_application_prefix" != "$old_application_prefix"
+    echo "The renewed profile changed the app signing identity and will not be installed." >&2
+    exit 1
+end
+
+set --local new_expiration (rl_plist_raw "$decoded_candidate" ExpirationDate)
+or exit 1
+set --local new_expiration_epoch (rl_iso8601_epoch "$new_expiration")
+or begin
+    echo "The renewed profile has an invalid expiration date." >&2
+    exit 1
+end
+if test $new_expiration_epoch -le $now_epoch; or test $new_expiration_epoch -le $old_max_expiration_epoch
+    echo "Xcode did not advance the provisioning-profile expiration date." >&2
+    echo "The candidate app will not be installed, and the old profile will be restored." >&2
+    exit 1
+end
+
+echo "New signature verified through "(rl_local_expiration $new_expiration_epoch)"."
+set --local install_json "$staging_root/install.json"
+set --local install_log "$staging_root/install.log"
+set --global _rl_resign_profiles_committed 1
+set --global _rl_resign_preserve_staging 1
+xcrun devicectl device install app \
+    --quiet \
+    --timeout 120 \
+    --device "$REMOTE_LOCATION_DEVICE" \
+    --json-output "$install_json" \
+    "$candidate" >"$install_log" 2>&1
+set --local install_status $status
+if test $install_status -ne 0
+    cp "$install_log" "$backup_directory/install.log"
+    chmod 600 "$backup_directory/install.log"
+    echo "The device did not provide a confirmed installation result." >&2
+    echo "The phone may or may not contain the renewed app, so the new profile and candidate were preserved." >&2
+    echo "Inspect the private transaction directory at $staging_root before retrying." >&2
+    exit $install_status
+end
+if not test -f "$install_json"; or not jq --exit-status '.info.outcome == "success"' "$install_json" >/dev/null 2>&1
+    echo "The device command returned success, but its installation result could not be verified." >&2
+    echo "The new profile and candidate were preserved at $staging_root for manual inspection." >&2
+    exit 1
+end
+
+set --global _rl_resign_preserve_staging 0
+echo "The renewed Pinshift app was installed without uninstalling the existing app."
+
+if not set --query _flag_no_launch
+    rl_launch_learning_app "$REMOTE_LOCATION_DEVICE" "$bundle_identifier" "$staging_root"
+    or exit $status
+end
+
+echo "Previous app profiles were archived at $backup_directory."

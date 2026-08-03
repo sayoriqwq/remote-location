@@ -60,6 +60,27 @@ rl-install
 如果 macOS 出现 Keychain 窗口，输入 Mac 登录密码并选择 **始终允许**。安装器会保留现有
 控制器身份和手机信任；失败时会恢复旧的控制器与安装元数据。
 
+## App 签名续期
+
+Personal Team 签名临近到期时，连接或通过 Wi-Fi 保持 iPhone 可达，然后运行：
+
+```fish
+cd /Users/sayori/Desktop/remote-location
+rl-resign-app
+```
+
+🔏 检查期限，并在剩余不超过 24 小时时自动续签、验证和原位安装。
+
+命令不会卸载 App，因此会尽量保留本机收藏和设置。它只会暂存与 Pinshift bundle ID
+完全匹配的旧 profile；开始安装前的构建或签名校验失败时会恢复旧 profile。安装请求发出后，
+断连或超时无法证明手机端是否已经更新，因此命令会保留新 profile、候选 App 和私有诊断目录，
+并明确提示结果不确定，不会伪装成已回滚。需要立即刷新时可运行 `rl-resign-app --force`。
+如果手机锁屏，续签和安装仍可能完成；解锁后手动打开 App，或运行
+`rl-resign-app --launch-only` 完成启动验证。
+
+首次使用该命令前，Xcode 必须已经登录 Apple Account，并至少成功签名构建过一次。如果
+Xcode 登录失效或要求双重验证，按命令提示在 **Xcode → Settings → Apple Accounts** 中完成。
+
 ## 检查环境
 
 遇到无法连接、按钮变灰或手机不就绪时，先运行只读检查：
@@ -75,8 +96,8 @@ rl-doctor
 - **Controller Link 未连接**：确认 `rl-start` 的终端仍在运行，并保持 App 在前台片刻。
 - **Apply 按钮为灰色**：先选择位置，并等待 Controller Link 与 Injection Backend 就绪。
 - **控制器源码已变化**：运行一次 `rl-install`，不要改用 `swift run`。
-- **App 无法启动或签名过期**：打开 `RemoteLocation.xcodeproj`，选择已连接的 iPhone，
-  在 Xcode 中重新 Build & Run。Personal Team 签名通常需要定期重新安装。
+- **App 无法启动或签名过期**：运行 `rl-resign-app --force`。如果提示 Xcode 账号失效，
+  先在 Xcode 的 Apple Accounts 设置中重新登录，再重试。
 - **换新手机或清除了 App Keychain**：运行 `rl-start`，把终端显示的当次六位码输入 App，
   只需重新配对一次。
 
@@ -89,3 +110,6 @@ rl-doctor
 | `rl-reset` | 清除可能仍在生效的模拟位置 |
 | `rl-doctor` | 只读检查 Xcode、iPhone、签名和控制器状态 |
 | `rl-install` | 首次安装或源码变化后更新稳定签名控制器 |
+| `rl-resign-app` | 签名剩余不超过 24 小时时续签并原位安装 App |
+| `rl-resign-app --force` | 立即请求更新的 profile、验证并原位安装 |
+| `rl-resign-app --launch-only` | 不续签，只在已解锁手机上完成启动验证 |

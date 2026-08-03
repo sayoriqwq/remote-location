@@ -95,6 +95,33 @@ final class RepositoryV11RequirementsTests: XCTestCase {
     XCTAssertTrue(contents.contains("codesign --verify"))
   }
 
+  func testAppResigningWorkflowValidatesBeforeUpdatingTheExistingApp() throws {
+    let helperURL = repositoryRoot.appending(path: "bin/rl-resign-app")
+    XCTAssertTrue(
+      FileManager.default.isExecutableFile(atPath: helperURL.path),
+      "The repository must provide an executable app renewal workflow"
+    )
+
+    let contents = try String(contentsOf: helperURL, encoding: .utf8)
+    let signingHelpers = try String(
+      contentsOf: repositoryRoot.appending(path: "bin/_rl-app-signing.fish"),
+      encoding: .utf8
+    )
+
+    XCTAssertTrue(contents.contains("-allowProvisioningUpdates"))
+    XCTAssertTrue(contents.contains("embedded.mobileprovision"))
+    XCTAssertTrue(contents.contains("codesign --verify --deep --strict"))
+    XCTAssertTrue(contents.contains("dev.sayori.remotelocation.learning"))
+    XCTAssertTrue(contents.contains("devicectl device install app"))
+    XCTAssertFalse(contents.contains("device uninstall"))
+    XCTAssertTrue(signingHelpers.contains("ApplicationIdentifierPrefix.0"))
+    XCTAssertTrue(signingHelpers.contains("$prefix.$bundle_identifier"))
+
+    let verification = try XCTUnwrap(contents.range(of: "codesign --verify --deep --strict"))
+    let installation = try XCTUnwrap(contents.range(of: "devicectl device install app"))
+    XCTAssertLessThan(verification.lowerBound, installation.lowerBound)
+  }
+
   func testInstalledControllerResolverRejectsEveryUnsafeInstallationState() throws {
     let contents = try String(
       contentsOf: repositoryRoot.appending(path: "bin/_rl-common.fish"),

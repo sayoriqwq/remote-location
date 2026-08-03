@@ -34,6 +34,29 @@ When exactly one paired physical iPhone is known to Xcode, these commands select
 4. Open the app project in Xcode and select automatic signing for an available development team. A Personal Team build can require rebuilding and reprovisioning every seven days.
 5. Build, install, and launch **Pinshift** on the iPhone.
 
+After that first signed build, renew the Personal Team app from the repository with:
+
+```fish
+rl-resign-app
+```
+
+🔏 Renews only when 24 hours or less remain, verifies the new profile, and updates the existing app.
+
+Use `rl-resign-app --force` to request a newer profile immediately. The command temporarily moves
+only profiles whose application identifier exactly matches `dev.sayori.remotelocation.learning`,
+then asks Xcode automatic signing for a replacement. Before installation it verifies the candidate
+code signature, bundle identifier, signing team, application prefix, and a strictly later expiration
+date. It never uninstalls the device app. A pre-install failure restores the old cached profile;
+successful renewals retain the old profile in a private repository-local backup under `.build/`.
+Once installation begins, a timeout or disconnect is an uncertain remote outcome rather than a safe
+rollback point. In that case the command keeps the new profile, signed candidate, and private logs for
+inspection and does not claim that the existing device app remained unchanged.
+
+Xcode must remain signed in to the Apple Account. Authentication expiry, two-factor authentication,
+or updated developer agreements still require interaction in Xcode. Wi-Fi installation requires the
+paired iPhone to remain visible to Xcode. A locked phone can defer only launch verification; unlock it
+and run `rl-resign-app --launch-only`, or open Pinshift manually.
+
 Keep the Active Test Device selector private. Supply it with `--device` or the `REMOTE_LOCATION_DEVICE` environment variable. Supply the approved full-Xcode developer directory with `--developer-directory` or `REMOTE_LOCATION_DEVELOPER_DIR`; this project does not require changing the global `xcode-select` value.
 
 ## Diagnose without changing settings
