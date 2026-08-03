@@ -4,3 +4,14 @@
  */
 "Switch to Simplified Chinese" = "Switch to Simplified Chinese";
 "Switch to English" = "Switch to English";
+"Test Diagnostics" = "Test Diagnostics";
+"Local evidence only. Diagnostics never retries, clears, or changes simulation state." = "Local evidence only. Diagnostics never retries, clears, or changes simulation state.";
+"Record status" = "Record status";
+"Enabled" = "Enabled";
+"Approximate size" = "Approximate size";
+"Events" = "Events";
+"Exporting…" = "Exporting…";
+"Export Diagnostics" = "Export Diagnostics";
+"Clear Diagnostics" = "Clear Diagnostics";
+"The diagnostic record could not be exported." = "The diagnostic record could not be exported.";
+"The diagnostic record could not be cleared." = "The diagnostic record could not be cleared.";

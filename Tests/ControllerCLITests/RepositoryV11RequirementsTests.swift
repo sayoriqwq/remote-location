@@ -23,6 +23,18 @@ final class RepositoryV11RequirementsTests: XCTestCase {
     }
   }
 
+  func testDiagnosticsHelperLocatesOrCopiesTheMacRecordWithoutRunningRecovery() throws {
+    let helperURL = repositoryRoot.appending(path: "bin/rl-diagnostics")
+    XCTAssertTrue(FileManager.default.isExecutableFile(atPath: helperURL.path))
+    let contents = try String(contentsOf: helperURL, encoding: .utf8)
+
+    XCTAssertTrue(contents.contains("mac-controller.jsonl"))
+    XCTAssertTrue(contents.contains("_flag_copy_to"))
+    XCTAssertFalse(contents.contains("rl-reset"))
+    XCTAssertFalse(contents.contains("devicectl"))
+    XCTAssertFalse(contents.contains("xcrun"))
+  }
+
   func testInstallWorkflowIsExplicitAndNeverUsesAnAllowAllKeyACL() throws {
     let installerURL = repositoryRoot.appending(path: "bin/rl-install")
     XCTAssertTrue(

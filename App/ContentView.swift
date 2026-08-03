@@ -4,17 +4,37 @@ import SwiftUI
 
 struct ContentView: View {
   @Binding var language: AppLanguage
-  @StateObject private var observer = LocationObserver()
-  @StateObject private var model = BaselineViewModel()
-  @StateObject private var controllerLink = ControllerLinkViewModel()
+  @StateObject private var observer: LocationObserver
+  @StateObject private var model: BaselineViewModel
+  @StateObject private var controllerLink: ControllerLinkViewModel
+  @StateObject private var diagnostics: SimulationDiagnosticsViewModel
+  @State private var didRecordLaunch = false
   @State private var showingLocationPicker = false
   @Environment(\.locale) private var locale
   @Environment(\.openURL) private var openURL
+
+  init(language: Binding<AppLanguage>) {
+    _language = language
+    let recorder = SimulationDiagnosticRecorder(side: .learningApp)
+    _observer = StateObject(
+      wrappedValue: LocationObserver(diagnostics: recorder)
+    )
+    _model = StateObject(
+      wrappedValue: BaselineViewModel(diagnostics: recorder)
+    )
+    _controllerLink = StateObject(
+      wrappedValue: ControllerLinkViewModel(diagnostics: recorder)
+    )
+    _diagnostics = StateObject(
+      wrappedValue: SimulationDiagnosticsViewModel(recorder: recorder)
+    )
+  }
 
   var body: some View {
     NavigationStack {
       Form {
         controllerLinkSection
+        diagnosticsSection
         selectionSection
         simulationSection
         observationSection
@@ -65,6 +85,10 @@ struct ContentView: View {
       }
     }
     .task {
+      if !didRecordLaunch {
+        didRecordLaunch = true
+        await diagnostics.recordAppLaunch()
+      }
       if let languageFixture {
         language = languageFixture
       }
@@ -74,6 +98,14 @@ struct ContentView: View {
       if localNetworkPermissionFixture == nil {
         controllerLink.start()
       }
+      while !Task.isCancelled {
+        await diagnostics.refreshNow()
+        do {
+          try await Task.sleep(for: .seconds(1))
+        } catch {
+          break
+        }
+      }
     }
     .onReceive(observer.$latestObservation.compactMap { $0 }) { observation in
       model.record(observation)
@@ -81,6 +113,11 @@ struct ContentView: View {
     .fullScreenCover(isPresented: $showingLocationPicker) {
       LocationPickerView(selected: model.selection.selected) { location, source in
         model.select(location, source: source)
+      }
+    }
+    .sheet(isPresented: $diagnostics.isSharePresented) {
+      if let url = diagnostics.exportedURL {
+        SimulationDiagnosticsShareSheet(url: url)
       }
     }
   }
@@ -254,6 +291,68 @@ struct ContentView: View {
           .foregroundStyle(.red)
           .accessibilityIdentifier("selection-error")
       }
+    }
+  }
+
+  private var diagnosticsSection: some View {
+    Section(localized("Test Diagnostics")) {
+      Text(
+        localized(
+          "Local evidence only. Diagnostics never retries, clears, or changes simulation state."
+        )
+      )
+      .font(.footnote)
+      .foregroundStyle(.secondary)
+
+      LabeledContent(localized("Record status")) {
+        Text(
+          diagnostics.status == nil
+            ? localized("Checking…")
+            : localized("Enabled")
+        )
+        .accessibilityIdentifier("diagnostics-status")
+      }
+
+      LabeledContent(localized("Approximate size")) {
+        Text(diagnostics.approximateSizeDescription)
+          .accessibilityIdentifier("diagnostics-size")
+      }
+
+      LabeledContent(localized("Events")) {
+        Text("\(diagnostics.status?.eventCount ?? 0)")
+          .accessibilityIdentifier("diagnostics-event-count")
+      }
+
+      Button {
+        diagnostics.export()
+      } label: {
+        Text(localized(diagnostics.isExporting ? "Exporting…" : "Export Diagnostics"))
+      }
+      .disabled(diagnostics.isExporting)
+      .accessibilityIdentifier("diagnostics-export")
+
+      Button(localized("Clear Diagnostics"), role: .destructive) {
+        diagnostics.clear()
+      }
+      .accessibilityIdentifier("diagnostics-clear")
+
+      if let actionError = diagnostics.actionError {
+        Text(localized(actionError))
+          .foregroundStyle(.red)
+          .accessibilityIdentifier("diagnostics-error")
+      }
+
+      #if DEBUG
+        if let artifact = diagnostics.exportedArtifactJSON {
+          Text(verbatim: artifact)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: artifact))
+            .accessibilityValue(Text(verbatim: artifact))
+            .accessibilityIdentifier("diagnostics-export-artifact")
+            .frame(width: 1, height: 1)
+            .opacity(0.01)
+        }
+      #endif
     }
   }
 

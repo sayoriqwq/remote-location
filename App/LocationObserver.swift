@@ -15,9 +15,11 @@ final class LocationObserver: NSObject, ObservableObject {
   @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
   @Published private(set) var errorMessage: String?
 
+  private let diagnostics: SimulationDiagnosticRecorder?
   private let manager = CLLocationManager()
 
-  override init() {
+  init(diagnostics: SimulationDiagnosticRecorder? = nil) {
+    self.diagnostics = diagnostics
     super.init()
     manager.delegate = self
     manager.desiredAccuracy = kCLLocationAccuracyBest
@@ -40,6 +42,10 @@ final class LocationObserver: NSObject, ObservableObject {
   }
 
   func start() {
+    record(
+      kind: "app.location.lifecycle-started",
+      fields: ["authorizationStatus": .text(String(describing: manager.authorizationStatus))]
+    )
     switch manager.authorizationStatus {
     case .notDetermined:
       manager.requestWhenInUseAuthorization()
@@ -67,6 +73,18 @@ final class LocationObserver: NSObject, ObservableObject {
       horizontalAccuracy: horizontalAccuracy,
       isSimulatedBySoftware: isSimulatedBySoftware
     )
+    var fields: SimulationDiagnosticFields = [
+      "latitude": .number(coordinate.latitude),
+      "longitude": .number(coordinate.longitude),
+      "observationTimestamp": .date(timestamp),
+      "horizontalAccuracy": .number(horizontalAccuracy),
+    ]
+    if let isSimulatedBySoftware {
+      fields["isSimulatedBySoftware"] = .boolean(isSimulatedBySoftware)
+    } else {
+      fields["isSimulatedBySoftware"] = .null
+    }
+    record(kind: "app.observed-location.received", fields: fields)
     #if DEBUG
       if ProcessInfo.processInfo.environment[
         "REMOTE_LOCATION_EVIDENCE_STDOUT"
@@ -77,6 +95,16 @@ final class LocationObserver: NSObject, ObservableObject {
       }
     #endif
     errorMessage = nil
+  }
+
+  private func record(
+    kind: String,
+    fields: SimulationDiagnosticFields = [:]
+  ) {
+    guard let diagnostics else { return }
+    Task {
+      await diagnostics.record(kind: kind, fields: fields)
+    }
   }
 }
 
@@ -131,6 +159,10 @@ extension LocationObserver: CLLocationManagerDelegate {
       }
     Task { @MainActor [weak self] in
       self?.errorMessage = message
+      self?.record(
+        kind: "app.observed-location.failed",
+        fields: ["error": .text(message)]
+      )
     }
   }
 }

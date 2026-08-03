@@ -24,6 +24,7 @@ targets:
       - path: App
       - path: Sources/ControllerLink
       - path: Sources/LocationDomain
+      - path: Sources/SimulationDiagnostics
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: ""

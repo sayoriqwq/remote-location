@@ -1,10 +1,14 @@
 import Foundation
+#if SWIFT_PACKAGE
+  import SimulationDiagnostics
+#endif
 
 public actor ControllerServerSession {
   private let identity: ControllerIdentity
   private let pairingAuthority: PairingCodeAuthority
   private let authorizationStore: any ControllerAuthorizationStore
   private let commandHandler: any ControllerCommandHandling
+  private let diagnostics: SimulationDiagnosticRecorder?
   private let now: @Sendable () -> Date
   private let makeAuthorization: @Sendable () throws -> ControllerAuthorization
 
@@ -16,28 +20,39 @@ public actor ControllerServerSession {
     now: @escaping @Sendable () -> Date = Date.init,
     makeAuthorization: @escaping @Sendable () throws -> ControllerAuthorization = {
       try ControllerAuthorization.generate()
-    }
+    },
+    diagnostics: SimulationDiagnosticRecorder? = nil
   ) {
     self.identity = identity
     self.pairingAuthority = pairingAuthority
     self.authorizationStore = authorizationStore
     self.commandHandler = commandHandler
+    self.diagnostics = diagnostics
     self.now = now
     self.makeAuthorization = makeAuthorization
   }
 
   public func process(_ request: ControllerLinkRequest) async -> ControllerLinkResponse {
+    await record(
+      kind: "controller.link.request.received",
+      requestID: request.requestID,
+      fields: requestFields(request)
+    )
     switch request {
     case .status(let requestID, let presentedAuthorization):
       guard
         let presentedAuthorization,
         await isAuthorized(presentedAuthorization)
       else {
-        return .rejected(requestID: requestID, reason: .pairingRequired)
+        return await finish(
+          .rejected(requestID: requestID, reason: .pairingRequired)
+        )
       }
-      return await processCommand(
-        .status(requestID: requestID),
-        expectedResult: .status
+      return await finish(
+        await processCommand(
+          .status(requestID: requestID),
+          expectedResult: .status
+        )
       )
 
     case .pair(let requestID, let code):
@@ -49,11 +64,17 @@ public actor ControllerServerSession {
         )
         let authorization = try makeAuthorization()
         try await authorizationStore.save(authorization)
-        return .paired(requestID: requestID, authorization: authorization)
+        return await finish(
+          .paired(requestID: requestID, authorization: authorization)
+        )
       } catch let error as PairingCodeError {
-        return .rejected(requestID: requestID, reason: map(error))
+        return await finish(
+          .rejected(requestID: requestID, reason: map(error))
+        )
       } catch {
-        return .rejected(requestID: requestID, reason: .invalidRequest)
+        return await finish(
+          .rejected(requestID: requestID, reason: .invalidRequest)
+        )
       }
 
     case .apply(
@@ -63,7 +84,9 @@ public actor ControllerServerSession {
       let longitude
     ):
       guard await isAuthorized(presentedAuthorization) else {
-        return .rejected(requestID: requestID, reason: .authorizationFailed)
+        return await finish(
+          .rejected(requestID: requestID, reason: .authorizationFailed)
+        )
       }
       guard
         latitude.isFinite,
@@ -71,25 +94,100 @@ public actor ControllerServerSession {
         (-90.0...90.0).contains(latitude),
         (-180.0...180.0).contains(longitude)
       else {
-        return .failed(requestID: requestID, reason: .invalidCoordinate)
+        return await finish(
+          .failed(requestID: requestID, reason: .invalidCoordinate)
+        )
       }
-      return await processCommand(
-        .apply(
-          requestID: requestID,
-          latitude: latitude,
-          longitude: longitude
-        ),
-        expectedResult: .apply
+      return await finish(
+        await processCommand(
+          .apply(
+            requestID: requestID,
+            latitude: latitude,
+            longitude: longitude
+          ),
+          expectedResult: .apply
+        )
       )
 
     case .stop(let requestID, let presentedAuthorization):
       guard await isAuthorized(presentedAuthorization) else {
-        return .rejected(requestID: requestID, reason: .authorizationFailed)
+        return await finish(
+          .rejected(requestID: requestID, reason: .authorizationFailed)
+        )
       }
-      return await processCommand(
-        .stop(requestID: requestID),
-        expectedResult: .stop
+      return await finish(
+        await processCommand(
+          .stop(requestID: requestID),
+          expectedResult: .stop
+        )
       )
+    }
+  }
+
+  private func record(
+    kind: String,
+    requestID: UUID,
+    fields: SimulationDiagnosticFields
+  ) async {
+    guard let diagnostics else { return }
+    await diagnostics.record(kind: kind, requestID: requestID, fields: fields)
+  }
+
+  private func finish(_ response: ControllerLinkResponse) async -> ControllerLinkResponse {
+    await record(
+      kind: "controller.link.response.sent",
+      requestID: response.requestID,
+      fields: responseFields(response)
+    )
+    return response
+  }
+
+  private func requestFields(_ request: ControllerLinkRequest) -> SimulationDiagnosticFields {
+    switch request {
+    case .status:
+      return ["command": .text("status")]
+    case .pair:
+      // Short-lived pairing codes and generated authorizations never enter the record.
+      return ["command": .text("pair")]
+    case .apply(_, _, let latitude, let longitude):
+      return [
+        "command": .text("apply"),
+        "latitude": .number(latitude),
+        "longitude": .number(longitude),
+      ]
+    case .stop:
+      return ["command": .text("stop")]
+    }
+  }
+
+  private func responseFields(_ response: ControllerLinkResponse) -> SimulationDiagnosticFields {
+    switch response {
+    case .status(_, let readiness):
+      switch readiness {
+      case .ready:
+        return ["outcome": .text("ready")]
+      case .unavailable(let reason):
+        return [
+          "outcome": .text("unavailable"),
+          "reason": .text(reason.rawValue),
+        ]
+      }
+    case .paired:
+      return ["outcome": .text("paired")]
+    case .applied:
+      return ["outcome": .text("applied")]
+    case .stopped:
+      return ["outcome": .text("stopped")]
+    case .failed(_, let reason):
+      return [
+        "outcome": .text("failed"),
+        "reason": .text(reason.rawValue),
+      ]
+    case .rejected(_, let reason):
+      return [
+        "outcome": .text("rejected"),
+        "reason": .text(reason.rawValue),
+      ]
     }
   }
 

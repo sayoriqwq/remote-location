@@ -1,4 +1,5 @@
 import CoreLocation
+import Foundation
 import XCTest
 
 @MainActor
@@ -75,6 +76,206 @@ final class RemoteLocationLearningUITests: XCTestCase {
     let matchStatus = app.staticTexts["match-status"]
     scrollUp(until: matchStatus, in: app)
     XCTAssertTrue(matchStatus.waitForExistence(timeout: 5))
+  }
+
+  func testLocalDiagnosticsAreaSupportsExportAndClearWithoutChangingSimulationState() {
+    let app = permissionFixtureApp(location: "allowed", localNetwork: "allowed")
+    app.launch()
+    app.tap()
+
+    let status = app.staticTexts["diagnostics-status"]
+    XCTAssertTrue(status.waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForLabel(status, equalTo: "Enabled", timeout: 5))
+    let size = app.staticTexts["diagnostics-size"]
+    XCTAssertTrue(size.exists)
+    let eventCount = app.staticTexts["diagnostics-event-count"]
+    XCTAssertTrue(eventCount.exists)
+
+    let clear = app.buttons["diagnostics-clear"]
+    XCTAssertTrue(clear.exists)
+    clear.tap()
+    XCTAssertTrue(
+      waitForLabel(
+        eventCount,
+        equalTo: "0",
+        timeout: 5
+      )
+    )
+
+    let simulationStatus = app.staticTexts.matching(identifier: "simulation-status").firstMatch
+    scrollUp(until: simulationStatus, in: app)
+    XCTAssertTrue(simulationStatus.waitForExistence(timeout: 5))
+    XCTAssertEqual(simulationStatus.label, "Save a Selected Location to begin.")
+
+    scrollToTop(in: app)
+    let export = app.buttons["diagnostics-export"]
+    XCTAssertTrue(export.waitForExistence(timeout: 5))
+    export.tap()
+  }
+
+  func testDiagnosticsSurviveFixtureApplyObservationStopAndAppRelaunch() {
+    let app = learningApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_DIAGNOSTICS_ARTIFACT_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+    waitForDiagnostics(in: app)
+
+    let coordinate = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
+    selectAndBeginObservation(of: coordinate, in: app)
+    applyAndVerifySimulation(of: coordinate, in: app)
+
+    let stop = app.buttons["stop-simulation"]
+    scrollUp(until: stop, in: app)
+    XCTAssertTrue(stop.waitForExistence(timeout: 5))
+    stop.tap()
+    let stopStatus = app.staticTexts["stop-status"]
+    XCTAssertTrue(stopStatus.waitForExistence(timeout: 5))
+    XCTAssertEqual(stopStatus.label, "Injection Backend cleared")
+
+    guard let firstArtifact = exportDiagnosticsArtifact(in: app) else { return }
+    guard let requestIDs = assertNormalDiagnosticSequence(firstArtifact) else {
+      return
+    }
+
+    app.terminate()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_DIAGNOSTICS_ARTIFACT_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+
+    waitForDiagnostics(in: app)
+    guard let relaunchedArtifact = exportDiagnosticsArtifact(in: app) else { return }
+    XCTAssertEqual(relaunchedArtifact.schemaVersion, firstArtifact.schemaVersion)
+    XCTAssertEqual(relaunchedArtifact.side, firstArtifact.side)
+    XCTAssertEqual(relaunchedArtifact.generationID, firstArtifact.generationID)
+    XCTAssertGreaterThanOrEqual(
+      relaunchedArtifact.events.count,
+      firstArtifact.events.count
+    )
+    XCTAssertTrue(
+      firstArtifact.events.allSatisfy { original in
+        relaunchedArtifact.events.contains {
+          $0.sessionID == original.sessionID
+            && $0.sequence == original.sequence
+            && $0.kind == original.kind
+        }
+      }
+    )
+    XCTAssertTrue(
+      relaunchedArtifact.events.contains {
+        $0.kind == "app.lifecycle.launched"
+          && $0.requestID == nil
+          && $0.sessionID != firstArtifact.events.last?.sessionID
+      }
+    )
+    XCTAssertTrue(
+      relaunchedArtifact.events.contains {
+        $0.requestID == requestIDs.apply
+      }
+    )
+    XCTAssertTrue(
+      relaunchedArtifact.events.contains {
+        $0.requestID == requestIDs.stop
+      }
+    )
+    if let lastOriginal = firstArtifact.events.last,
+      let lastOriginalIndex = relaunchedArtifact.events.firstIndex(where: {
+        $0.sessionID == lastOriginal.sessionID
+          && $0.sequence == lastOriginal.sequence
+          && $0.kind == lastOriginal.kind
+      }),
+      let relaunchedLifecycleIndex = relaunchedArtifact.events.lastIndex(where: {
+        $0.kind == "app.lifecycle.launched"
+          && $0.sessionID != firstArtifact.events.last?.sessionID
+      })
+    {
+      XCTAssertLessThan(lastOriginalIndex, relaunchedLifecycleIndex)
+    } else {
+      XCTFail("The relaunch lifecycle event was not appended after persisted events.")
+    }
+  }
+
+  func testDiagnosticsRecordUnavailableControllerAndFailedStopWithoutClaimingStopped() {
+    let app = learningApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FAILURE_FIXTURE"] = "failed-stop"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_DIAGNOSTICS_ARTIFACT_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+    waitForDiagnostics(in: app)
+    clearDiagnostics(in: app)
+
+    let coordinate = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
+    selectAndBeginObservation(of: coordinate, in: app)
+    applyAndVerifySimulation(of: coordinate, in: app)
+
+    let stop = app.buttons["stop-simulation"]
+    scrollUp(until: stop, in: app)
+    XCTAssertTrue(stop.waitForExistence(timeout: 5))
+    stop.tap()
+
+    let stopStatus = app.staticTexts["stop-status"]
+    XCTAssertTrue(stopStatus.waitForExistence(timeout: 5))
+    XCTAssertEqual(stopStatus.label, "Could not stop the active simulation")
+    XCTAssertFalse(
+      app.staticTexts.matching(
+        NSPredicate(
+          format: "identifier == %@ AND label == %@",
+          "stop-status",
+          "Injection Backend cleared"
+        )
+      ).firstMatch.exists
+    )
+
+    let simulationStatus = app.staticTexts.matching(identifier: "simulation-status").firstMatch
+    XCTAssertTrue(simulationStatus.waitForExistence(timeout: 5))
+    XCTAssertEqual(simulationStatus.label, "Verified Simulation in this Learning App")
+
+    scrollToTop(in: app)
+    let controllerStatus = app.staticTexts["controller-link-status"]
+    XCTAssertTrue(controllerStatus.waitForExistence(timeout: 5))
+    XCTAssertTrue(controllerStatus.label.hasSuffix("Controller unavailable"))
+
+    guard let artifact = exportDiagnosticsArtifact(in: app) else { return }
+    let kinds = artifact.events.map(\.kind)
+    XCTAssertTrue(kinds.contains("app.controller-link.unavailable"))
+    XCTAssertTrue(kinds.contains("app.controller-link.connection-failed"))
+    XCTAssertTrue(kinds.contains("app.stop.failed"))
+    XCTAssertFalse(kinds.contains("app.stop.clear-acknowledged"))
+    guard
+      let stopStartedIndex = artifact.events.lastIndex(where: {
+        $0.kind == "app.stop.started"
+      }),
+      let unavailableIndex = index(
+        of: "app.controller-link.unavailable",
+        after: stopStartedIndex,
+        in: artifact.events
+      ),
+      let failedIndex = index(
+        of: "app.stop.failed",
+        after: unavailableIndex,
+        in: artifact.events
+      ),
+      let stopRequestID = artifact.events[stopStartedIndex].requestID
+    else {
+      XCTFail("The exported failure artifact did not contain the ordered Stop failure.")
+      return
+    }
+    XCTAssertLessThan(stopStartedIndex, unavailableIndex)
+    XCTAssertLessThan(unavailableIndex, failedIndex)
+    XCTAssertTrue(
+      artifact.events.contains {
+        $0.kind == "app.stop.response" && $0.requestID == stopRequestID
+      }
+    )
+    XCTAssertFalse(
+      artifact.events.contains {
+        ($0.kind == "app.controller-link.stop-response"
+          || $0.kind == "app.stop.response")
+          && stringValue("outcome", in: $0.fields) == "stopped"
+      }
+    )
   }
 
   func testLanguageToggleSwitchesImmediatelyAndPersistsTheChoice() {
@@ -543,6 +744,149 @@ final class RemoteLocationLearningUITests: XCTestCase {
     return app
   }
 
+  private func waitForDiagnostics(in app: XCUIApplication) {
+    scrollToTop(in: app)
+    XCTAssertTrue(app.staticTexts["diagnostics-status"].waitForExistence(timeout: 5))
+    XCTAssertTrue(app.staticTexts["diagnostics-event-count"].waitForExistence(timeout: 5))
+  }
+
+  private func clearDiagnostics(in app: XCUIApplication) {
+    scrollToTop(in: app)
+    let clear = app.buttons["diagnostics-clear"]
+    XCTAssertTrue(clear.waitForExistence(timeout: 5))
+    clear.tap()
+    let eventCount = app.staticTexts["diagnostics-event-count"]
+    XCTAssertTrue(waitForLabel(eventCount, endingWith: ", 0", timeout: 5))
+  }
+
+  private func exportDiagnosticsArtifact(
+    in app: XCUIApplication
+  ) -> ExportedDiagnosticArtifact? {
+    scrollToTop(in: app)
+    let export = app.buttons["diagnostics-export"]
+    XCTAssertTrue(export.waitForExistence(timeout: 5))
+    export.tap()
+
+    let seam = app.descendants(matching: .any)["diagnostics-export-artifact"]
+    scrollUp(until: seam, in: app)
+    XCTAssertTrue(seam.waitForExistence(timeout: 5))
+    let rawArtifact = (seam.value as? String) ?? seam.label
+    guard
+      let data = rawArtifact.data(using: .utf8),
+      let artifact = try? JSONDecoder().decode(
+        ExportedDiagnosticArtifact.self,
+        from: data
+      )
+    else {
+      XCTFail("The Export artifact seam did not contain a decodable schema artifact.")
+      return nil
+    }
+    return artifact
+  }
+
+  private func assertNormalDiagnosticSequence(
+    _ artifact: ExportedDiagnosticArtifact
+  ) -> (apply: UUID, stop: UUID)? {
+    XCTAssertEqual(artifact.schemaVersion, 1)
+    XCTAssertEqual(artifact.side, "learning-app")
+    XCTAssertFalse(artifact.createdAt.isEmpty)
+    guard let launchIndex = artifact.events.lastIndex(where: {
+      $0.kind == "app.lifecycle.launched"
+    }) else {
+      XCTFail("The exported artifact did not contain an app lifecycle event.")
+      return nil
+    }
+    guard
+      let selectionIndex = index(
+        of: "app.selection.replaced",
+        after: launchIndex,
+        in: artifact.events
+      ),
+      let applyIndex = index(
+        of: "app.apply.started",
+        after: selectionIndex,
+        in: artifact.events
+      ),
+      let observationIndex = index(
+        of: "app.apply.verification-result",
+        after: applyIndex,
+        in: artifact.events
+      ),
+      let stopIndex = index(
+        of: "app.stop.started",
+        after: observationIndex,
+        in: artifact.events
+      ),
+      let clearIndex = index(
+        of: "app.stop.clear-acknowledged",
+        after: stopIndex,
+        in: artifact.events
+      )
+    else {
+      XCTFail("The exported artifact did not contain the ordered normal journey.")
+      return nil
+    }
+    XCTAssertLessThan(launchIndex, selectionIndex)
+    XCTAssertLessThan(selectionIndex, applyIndex)
+    XCTAssertLessThan(applyIndex, observationIndex)
+    XCTAssertLessThan(observationIndex, stopIndex)
+    XCTAssertLessThan(stopIndex, clearIndex)
+
+    guard let applyRequestID = artifact.events[applyIndex].requestID else {
+      XCTFail("The Apply event did not contain a request ID.")
+      return nil
+    }
+    XCTAssertTrue(
+      artifact.events.contains {
+        $0.kind == "app.apply.response" && $0.requestID == applyRequestID
+      }
+    )
+    XCTAssertTrue(
+      artifact.events.contains {
+        $0.kind == "app.apply.acknowledged" && $0.requestID == applyRequestID
+      }
+    )
+    XCTAssertTrue(
+      artifact.events.contains {
+        $0.kind == "app.observation.verification-updated"
+          && $0.sequence > artifact.events[applyIndex].sequence
+      }
+    )
+
+    guard let stopRequestID = artifact.events[stopIndex].requestID else {
+      XCTFail("The Stop event did not contain a request ID.")
+      return nil
+    }
+    XCTAssertTrue(
+      artifact.events.contains {
+        $0.kind == "app.stop.response" && $0.requestID == stopRequestID
+      }
+    )
+    XCTAssertTrue(
+      artifact.events.contains {
+        $0.kind == "app.stop.clear-acknowledged"
+          && $0.requestID == stopRequestID
+      }
+    )
+    return (applyRequestID, stopRequestID)
+  }
+
+  private func index(
+    of kind: String,
+    after index: Int,
+    in events: [ExportedDiagnosticEvent]
+  ) -> Int? {
+    events.indices.first(where: { $0 > index && events[$0].kind == kind })
+  }
+
+  private func stringValue(
+    _ key: String,
+    in fields: [String: ExportedDiagnosticValue]
+  ) -> String? {
+    guard case .string(let value) = fields[key] else { return nil }
+    return value
+  }
+
   private func learningApp() -> XCUIApplication {
     let app = XCUIApplication()
     app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "en"
@@ -592,5 +936,82 @@ final class RemoteLocationLearningUITests: XCTestCase {
       let finish = collectionView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
       start.press(forDuration: 0.05, thenDragTo: finish)
     }
+  }
+}
+
+private struct ExportedDiagnosticArtifact: Decodable {
+  let schemaVersion: Int
+  let side: String
+  let generationID: UUID
+  let createdAt: String
+  let events: [ExportedDiagnosticEvent]
+}
+
+private struct ExportedDiagnosticEvent: Decodable {
+  let sessionID: UUID
+  let sequence: UInt64
+  let kind: String
+  let requestID: UUID?
+  let fields: [String: ExportedDiagnosticValue]
+}
+
+private enum ExportedDiagnosticValue: Decodable {
+  case string(String)
+  case number(Double)
+  case integer(Int64)
+  case boolean(Bool)
+  case array([ExportedDiagnosticValue])
+  case object([String: ExportedDiagnosticValue])
+  case null
+
+  init(from decoder: Decoder) throws {
+    if let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) {
+      var values: [String: ExportedDiagnosticValue] = [:]
+      for key in keyed.allKeys {
+        values[key.stringValue] = try keyed.decode(
+          ExportedDiagnosticValue.self,
+          forKey: key
+        )
+      }
+      self = .object(values)
+      return
+    }
+
+    if var unkeyed = try? decoder.unkeyedContainer() {
+      var values: [ExportedDiagnosticValue] = []
+      while !unkeyed.isAtEnd {
+        values.append(try unkeyed.decode(ExportedDiagnosticValue.self))
+      }
+      self = .array(values)
+      return
+    }
+
+    let container = try decoder.singleValueContainer()
+    if container.decodeNil() {
+      self = .null
+    } else if let value = try? container.decode(Bool.self) {
+      self = .boolean(value)
+    } else if let value = try? container.decode(Int64.self) {
+      self = .integer(value)
+    } else if let value = try? container.decode(Double.self) {
+      self = .number(value)
+    } else {
+      self = .string(try container.decode(String.self))
+    }
+  }
+}
+
+private struct AnyCodingKey: CodingKey {
+  let stringValue: String
+  let intValue: Int?
+
+  init?(stringValue: String) {
+    self.stringValue = stringValue
+    intValue = nil
+  }
+
+  init?(intValue: Int) {
+    stringValue = String(intValue)
+    self.intValue = intValue
   }
 }

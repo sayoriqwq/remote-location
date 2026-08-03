@@ -1,4 +1,5 @@
 import Foundation
+import SimulationDiagnostics
 import SimulationController
 
 public struct ControllerRuntimeConfiguration: Equatable, Sendable {
@@ -24,15 +25,19 @@ public enum ControllerCLIRuntime {
     device: String? = nil,
     developerDirectory: String? = nil,
     environment: [String: String] = ProcessInfo.processInfo.environment,
-    executor: any DevicectlCommandExecuting = FoundationDevicectlCommandExecutor()
+    executor: any DevicectlCommandExecuting = FoundationDevicectlCommandExecutor(),
+    diagnostics: SimulationDiagnosticRecorder? = nil
   ) -> ControllerCLIRunner {
-    ControllerCLIRunner(
+    let recorder = diagnostics ?? makeDiagnostics(environment: environment)
+    return ControllerCLIRunner(
       controller: makeController(
         device: device,
         developerDirectory: developerDirectory,
         environment: environment,
-        executor: executor
-      )
+        executor: executor,
+        diagnostics: recorder
+      ),
+      diagnostics: recorder
     )
   }
 
@@ -40,7 +45,8 @@ public enum ControllerCLIRuntime {
     device: String? = nil,
     developerDirectory: String? = nil,
     environment: [String: String] = ProcessInfo.processInfo.environment,
-    executor: any DevicectlCommandExecuting = FoundationDevicectlCommandExecutor()
+    executor: any DevicectlCommandExecuting = FoundationDevicectlCommandExecutor(),
+    diagnostics: SimulationDiagnosticRecorder? = nil
   ) -> SimulationController {
     let configuration = resolveConfiguration(
       device: device,
@@ -48,12 +54,24 @@ public enum ControllerCLIRuntime {
       environment: environment
     )
 
+    let diagnostics = diagnostics ?? makeDiagnostics(environment: environment)
     return SimulationController(
       backend: DevicectlInjectionBackend(
         device: configuration.device ?? "",
         developerDirectory: configuration.developerDirectory,
-        executor: executor
-      )
+        executor: executor,
+        diagnostics: diagnostics
+      ),
+      diagnostics: diagnostics
+    )
+  }
+
+  public static func makeDiagnostics(
+    environment: [String: String] = ProcessInfo.processInfo.environment
+  ) -> SimulationDiagnosticRecorder {
+    SimulationDiagnosticRecorder(
+      side: .macController,
+      directory: SimulationDiagnosticRecorder.defaultDirectory(environment: environment)
     )
   }
 
@@ -76,25 +94,58 @@ public enum ControllerCLIRuntime {
     sleep: @Sendable (Double) async throws -> Void = { duration in
       try await Task.sleep(for: .seconds(duration))
     },
+    diagnostics: SimulationDiagnosticRecorder? = nil,
     report: @Sendable (ControllerCLIResult) async -> Void
   ) async throws {
+    if let diagnostics {
+      await diagnostics.record(kind: "controller.lifecycle.serve-started")
+    }
     do {
       try await sleep(seconds)
     } catch {
-      await reportServeCleanup(using: controller, report: report)
+      await reportServeCleanup(
+        using: controller,
+        diagnostics: diagnostics,
+        interrupted: true,
+        report: report
+      )
       throw error
     }
-    await reportServeCleanup(using: controller, report: report)
+    await reportServeCleanup(
+      using: controller,
+      diagnostics: diagnostics,
+      interrupted: false,
+      report: report
+    )
   }
 
   private static func reportServeCleanup(
     using controller: SimulationController,
+    diagnostics: SimulationDiagnosticRecorder?,
+    interrupted: Bool,
     report: @Sendable (ControllerCLIResult) async -> Void
   ) async {
-    let result = await ControllerCLIRunner(controller: controller).run(
+    await diagnostics?.record(
+      kind: interrupted
+        ? "controller.lifecycle.interrupted-shutdown-cleanup-started"
+        : "controller.lifecycle.shutdown-cleanup-started"
+    )
+    let result = await ControllerCLIRunner(
+      controller: controller,
+      diagnostics: diagnostics
+    ).run(
       .reset(requestID: UUID())
     )
     await report(result)
+    await diagnostics?.record(
+      kind: interrupted
+        ? "controller.lifecycle.interrupted-shutdown-cleanup-finished"
+        : "controller.lifecycle.shutdown-cleanup-finished",
+      fields: [
+        "exitCode": .integer(Int64(result.exitCode)),
+        "outcome": .text(result.exitCode == 0 ? "success" : "failed"),
+      ]
+    )
   }
 
   private static func nonempty(_ value: String?) -> String? {

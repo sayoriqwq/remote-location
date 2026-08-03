@@ -1,3 +1,5 @@
+import Foundation
+import SimulationDiagnostics
 import XCTest
 
 @testable import ControllerLink
@@ -148,6 +150,40 @@ final class ControllerServerSessionTests: XCTestCase {
         .stop(requestID: stopID),
       ]
     )
+  }
+
+  func testPairingAndAuthorizationValuesNeverEnterTheControllerRecord() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("remote-location-link-events-(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let identity = try ControllerIdentity(fingerprint: Data(repeating: 0x71, count: 32))
+    let authorization = try ControllerAuthorization(bytes: Data(repeating: 0x72, count: 32))
+    let diagnostics = SimulationDiagnosticRecorder(
+      side: .macController,
+      directory: directory
+    )
+    let session = ControllerServerSession(
+      identity: identity,
+      pairingAuthority: try PairingCodeAuthority(
+        code: "123456",
+        identity: identity,
+        expiresAt: Date(timeIntervalSince1970: 200)
+      ),
+      authorizationStore: InMemoryControllerAuthorizationStore(),
+      now: { Date(timeIntervalSince1970: 100) },
+      makeAuthorization: { authorization },
+      diagnostics: diagnostics
+    )
+
+    let response = await session.process(
+      .pair(requestID: UUID(), code: "123456")
+    )
+    XCTAssertEqual(response, .paired(requestID: response.requestID, authorization: authorization))
+
+    let exported = String(data: try await diagnostics.exportData(), encoding: .utf8)!
+    XCTAssertFalse(exported.contains("123456"))
+    XCTAssertFalse(exported.contains("authorization"))
+    XCTAssertFalse(exported.contains("72727272"))
   }
 }
 
