@@ -69,6 +69,33 @@
 "Map" = "地图";
 "Place search" = "地点搜索";
 
+/* Saved locations */
+"Saved Locations" = "已保存地点";
+"Save Current Location" = "保存当前地点";
+"Saved Location Name" = "已保存地点名称";
+"Save" = "保存";
+"Cancel" = "取消";
+"Name the current Selected Location so you can choose it later." = "请为当前待应用位置命名，以便稍后选择。";
+"Renaming changes only the Saved Location name." = "重命名只会更改已保存地点的名称。";
+"Rename Saved Location" = "重命名已保存地点";
+"Delete Saved Location?" = "删除已保存地点？";
+"Delete" = "删除";
+"Deleting %@ changes only the Saved Locations collection." = "删除 %@ 只会更改已保存地点集合。";
+"No Saved Locations yet." = "尚无已保存地点。";
+"Saved Locations stay on this iPhone and keep their creation order." = "已保存地点仅保留在此 iPhone 上，并按创建顺序排列。";
+"Choose Saved Location %@ at %@" = "选择已保存地点 %@（%@）";
+"Replaces Selected Location without applying a simulation." = "替换待应用位置，但不会应用模拟。";
+"Rename Saved Location %@" = "重命名已保存地点 %@";
+"Delete Saved Location %@" = "删除已保存地点 %@";
+"Saved Location" = "已保存地点";
+"Saved Location names cannot be blank. Enter a name and try again." = "已保存地点名称不能为空。请输入名称后重试。";
+"A Saved Location with this name already exists. Choose a different name." = "已存在同名的已保存地点。请选择其他名称。";
+"This Saved Location already exists. Try again." = "此已保存地点已存在，请重试。";
+"This Saved Location no longer exists." = "此已保存地点已不存在。";
+"Saved Locations use an unsupported version." = "已保存地点使用了不支持的版本。";
+"Saved Locations could not be loaded." = "无法加载已保存地点。";
+"Saved Locations could not be saved. Your existing collection is unchanged." = "无法保存已保存地点；现有集合未更改。";
+
 /* Static simulation */
 "Static Simulation" = "静态模拟";
 "Apply sends only the current Selected Location to your paired Mac controller. Applied confirms the backend; Verified additionally requires a fresh nearby observation in this app." = "“应用”只会把当前待应用位置发送给已配对的 Mac 模拟控制器。“已应用”表示注入后端已确认；“已验证”还要求本 App 获得一次新的邻近观测。";

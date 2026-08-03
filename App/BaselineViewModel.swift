@@ -8,8 +8,50 @@ final class BaselineViewModel: ObservableObject {
   @Published private(set) var manualSession = ManualSimulationSession()
   @Published private(set) var selection = LocationSelectionState()
   @Published private(set) var inputError: String?
+  @Published private(set) var savedLocations = SavedLocationCollection()
+  @Published private(set) var savedLocationError: String?
+  @Published private(set) var savedLocationPersistenceError = false
+
+  private var savedLocationRepository: SavedLocationRepository
   private var expirationTask: Task<Void, Never>?
   private var manualExpirationTask: Task<Void, Never>?
+
+  init(savedLocationStore: any SavedLocationStore = FileSavedLocationStore()) {
+    if let resetToken = ProcessInfo.processInfo.environment[
+      "REMOTE_LOCATION_E2E_SAVED_LOCATIONS_RESET_TOKEN"
+    ], let resettableStore = savedLocationStore as? any ResettableSavedLocationStore,
+      UserDefaults.standard.string(
+        forKey: "remote-location-e2e-saved-locations-reset-token"
+      ) != resetToken
+    {
+      do {
+        try resettableStore.reset()
+        UserDefaults.standard.set(
+          resetToken,
+          forKey: "remote-location-e2e-saved-locations-reset-token"
+        )
+      } catch {
+        // The normal load below surfaces the actionable persistence error.
+      }
+    }
+
+    let repository: SavedLocationRepository
+    let initialError: String?
+    do {
+      repository = try SavedLocationRepository(store: savedLocationStore)
+      initialError = nil
+    } catch {
+      repository = SavedLocationRepository(
+        collection: SavedLocationCollection(),
+        store: savedLocationStore
+      )
+      initialError = "Saved Locations could not be loaded."
+    }
+    savedLocationRepository = repository
+    savedLocations = repository.collection
+    savedLocationError = initialError
+    savedLocationPersistenceError = initialError != nil
+  }
 
   func saveSelection() {
     do {
@@ -20,6 +62,68 @@ final class BaselineViewModel: ObservableObject {
       _ = select(selection, source: .manual)
     } catch {
       inputError = error.localizedDescription
+    }
+  }
+
+  func clearSavedLocationError() {
+    savedLocationError = nil
+    savedLocationPersistenceError = false
+  }
+
+  func saveCurrentLocation(named name: String) {
+    guard let selected = selection.selected else {
+      savedLocationError = "Save a valid Selected Location first."
+      savedLocationPersistenceError = false
+      return
+    }
+
+    do {
+      _ = try savedLocationRepository.add(
+        name: name,
+        coordinate: selected
+      )
+      savedLocations = savedLocationRepository.collection
+      savedLocationError = nil
+      savedLocationPersistenceError = false
+    } catch let error as SavedLocationError {
+      savedLocationError = savedLocationErrorMessage(for: error)
+      savedLocationPersistenceError = false
+    } catch {
+      savedLocationError =
+        "Saved Locations could not be saved. Your existing collection is unchanged."
+      savedLocationPersistenceError = true
+    }
+  }
+
+  func renameSavedLocation(id: UUID, to name: String) {
+    do {
+      try savedLocationRepository.rename(id: id, to: name)
+      savedLocations = savedLocationRepository.collection
+      savedLocationError = nil
+      savedLocationPersistenceError = false
+    } catch let error as SavedLocationError {
+      savedLocationError = savedLocationErrorMessage(for: error)
+      savedLocationPersistenceError = false
+    } catch {
+      savedLocationError =
+        "Saved Locations could not be saved. Your existing collection is unchanged."
+      savedLocationPersistenceError = true
+    }
+  }
+
+  func deleteSavedLocation(id: UUID) {
+    do {
+      try savedLocationRepository.delete(id: id)
+      savedLocations = savedLocationRepository.collection
+      savedLocationError = nil
+      savedLocationPersistenceError = false
+    } catch let error as SavedLocationError {
+      savedLocationError = savedLocationErrorMessage(for: error)
+      savedLocationPersistenceError = false
+    } catch {
+      savedLocationError =
+        "Saved Locations could not be saved. Your existing collection is unchanged."
+      savedLocationPersistenceError = true
     }
   }
 
@@ -191,6 +295,21 @@ final class BaselineViewModel: ObservableObject {
       .responseIdentityMismatch
     default:
       .requestRejected(stableCode: reason.rawValue)
+    }
+  }
+
+  private func savedLocationErrorMessage(for error: SavedLocationError) -> String {
+    switch error {
+    case .emptyName:
+      "Saved Location names cannot be blank. Enter a name and try again."
+    case .duplicateName:
+      "A Saved Location with this name already exists. Choose a different name."
+    case .duplicateIdentity:
+      "This Saved Location already exists. Try again."
+    case .notFound:
+      "This Saved Location no longer exists."
+    case .unsupportedVersion:
+      "Saved Locations use an unsupported version."
     }
   }
 }

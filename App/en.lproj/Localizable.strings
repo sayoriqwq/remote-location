@@ -4,3 +4,31 @@
  */
 "Switch to Simplified Chinese" = "Switch to Simplified Chinese";
 "Switch to English" = "Switch to English";
+
+/* Saved locations */
+"Saved Locations" = "Saved Locations";
+"Save Current Location" = "Save Current Location";
+"Saved Location Name" = "Saved Location Name";
+"Save" = "Save";
+"Cancel" = "Cancel";
+"Name the current Selected Location so you can choose it later." = "Name the current Selected Location so you can choose it later.";
+"Renaming changes only the Saved Location name." = "Renaming changes only the Saved Location name.";
+"Rename Saved Location" = "Rename Saved Location";
+"Delete Saved Location?" = "Delete Saved Location?";
+"Delete" = "Delete";
+"Deleting %@ changes only the Saved Locations collection." = "Deleting %@ changes only the Saved Locations collection.";
+"No Saved Locations yet." = "No Saved Locations yet.";
+"Saved Locations stay on this iPhone and keep their creation order." = "Saved Locations stay on this iPhone and keep their creation order.";
+"Choose Saved Location %@ at %@" = "Choose Saved Location %@ at %@";
+"Replaces Selected Location without applying a simulation." = "Replaces Selected Location without applying a simulation.";
+"Rename Saved Location %@" = "Rename Saved Location %@";
+"Delete Saved Location %@" = "Delete Saved Location %@";
+"Saved Location" = "Saved Location";
+"Saved Location names cannot be blank. Enter a name and try again." = "Saved Location names cannot be blank. Enter a name and try again.";
+"A Saved Location with this name already exists. Choose a different name." = "A Saved Location with this name already exists. Choose a different name.";
+"This Saved Location already exists. Try again." = "This Saved Location already exists. Try again.";
+"This Saved Location no longer exists." = "This Saved Location no longer exists.";
+"Saved Locations use an unsupported version." = "Saved Locations use an unsupported version.";
+"Saved Locations could not be loaded." = "Saved Locations could not be loaded.";
+"Save a valid Selected Location first." = "Save a valid Selected Location first.";
+"Saved Locations could not be saved. Your existing collection is unchanged." = "Saved Locations could not be saved. Your existing collection is unchanged.";
