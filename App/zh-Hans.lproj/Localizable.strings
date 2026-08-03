@@ -3,6 +3,9 @@
 "%@, %@" = "%@, %@";
 "%@ s" = "%@ 秒";
 "%@ m" = "%@ 米";
+"%@ km" = "%@ 千米";
+"About %@ m" = "约 %@ 米";
+"About %@ km" = "约 %@ 千米";
 "Switch to Simplified Chinese" = "切换到简体中文";
 "Switch to English" = "切换到英文";
 "Test Diagnostics" = "测试诊断";
@@ -187,6 +190,13 @@
 "Selected" = "已选择";
 "Use Map Center as Selected Location" = "将地图中心设为待应用位置";
 "Map center" = "地图中心";
+"Displacement from opening location" = "相对打开时位置的位移";
+"Map visible range" = "地图可视范围";
+"Broad default view" = "广域默认视图";
+"Restore Opening Location" = "恢复打开时位置";
+"Opening location restored as the Selected Location." = "打开时位置已恢复为待应用位置。";
+"Map restored to the opening location." = "地图已恢复到打开时位置。";
+"Commits the map center without applying a simulation." = "提交地图中心，但不会应用模拟。";
 "Place Search" = "地点搜索";
 "Search for a place" = "搜索地点";
 "Search Places" = "搜索地点";

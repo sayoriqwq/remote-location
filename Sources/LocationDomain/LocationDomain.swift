@@ -114,6 +114,30 @@ public enum ObservationMatch: Equatable, Sendable {
   case tooFar(distanceMeters: Double)
 }
 
+public enum LocationDistance {
+  private static let earthRadiusMeters = 6_371_000.0
+
+  public static func meters(
+    from start: SelectedLocation,
+    to end: SelectedLocation
+  ) -> Double {
+    let startLatitude = start.latitude * .pi / 180
+    let endLatitude = end.latitude * .pi / 180
+    let latitudeDelta = (end.latitude - start.latitude) * .pi / 180
+    let longitudeDelta = (end.longitude - start.longitude) * .pi / 180
+
+    let haversine =
+      pow(sin(latitudeDelta / 2), 2)
+      + cos(startLatitude) * cos(endLatitude) * pow(sin(longitudeDelta / 2), 2)
+    let boundedHaversine = min(max(haversine, 0), 1)
+    let centralAngle = 2 * atan2(
+      sqrt(boundedHaversine),
+      sqrt(1 - boundedHaversine)
+    )
+    return earthRadiusMeters * centralAngle
+  }
+}
+
 public enum ObservationMatcher {
   public static let maximumElapsedSeconds: TimeInterval = 15
   public static let maximumDistanceMeters = 25.0
@@ -131,7 +155,10 @@ public enum ObservationMatcher {
       return .timedOut(elapsedSeconds: elapsedSeconds)
     }
 
-    let distanceMeters = distance(from: selected, to: observation.coordinate)
+    let distanceMeters = LocationDistance.meters(
+      from: selected,
+      to: observation.coordinate
+    )
     guard distanceMeters <= maximumDistanceMeters else {
       return .tooFar(distanceMeters: distanceMeters)
     }
@@ -142,23 +169,6 @@ public enum ObservationMatcher {
         distanceMeters: distanceMeters
       )
     )
-  }
-
-  private static func distance(
-    from start: SelectedLocation,
-    to end: SelectedLocation
-  ) -> Double {
-    let earthRadiusMeters = 6_371_000.0
-    let startLatitude = start.latitude * .pi / 180
-    let endLatitude = end.latitude * .pi / 180
-    let latitudeDelta = (end.latitude - start.latitude) * .pi / 180
-    let longitudeDelta = (end.longitude - start.longitude) * .pi / 180
-
-    let haversine =
-      pow(sin(latitudeDelta / 2), 2)
-      + cos(startLatitude) * cos(endLatitude) * pow(sin(longitudeDelta / 2), 2)
-    let centralAngle = 2 * atan2(sqrt(haversine), sqrt(1 - haversine))
-    return earthRadiusMeters * centralAngle
   }
 }
 

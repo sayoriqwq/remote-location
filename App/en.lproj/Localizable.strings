@@ -43,3 +43,14 @@
 "Saved Locations could not be loaded." = "Saved Locations could not be loaded.";
 "Save a valid Selected Location first." = "Save a valid Selected Location first.";
 "Saved Locations could not be saved. Your existing collection is unchanged." = "Saved Locations could not be saved. Your existing collection is unchanged.";
+
+"%@ km" = "%@ km";
+"About %@ m" = "About %@ m";
+"About %@ km" = "About %@ km";
+"Displacement from opening location" = "Displacement from opening location";
+"Map visible range" = "Map visible range";
+"Broad default view" = "Broad default view";
+"Restore Opening Location" = "Restore Opening Location";
+"Opening location restored as the Selected Location." = "Opening location restored as the Selected Location.";
+"Map restored to the opening location." = "Map restored to the opening location.";
+"Commits the map center without applying a simulation." = "Commits the map center without applying a simulation.";
