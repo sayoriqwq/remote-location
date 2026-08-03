@@ -315,6 +315,264 @@ final class RemoteLocationLearningUITests: XCTestCase {
     )
   }
 
+  func testSavedLocationsPersistSelectionRenameAndDeleteWithoutApplying() {
+    let app = savedLocationsFixtureApp()
+    app.launch()
+    app.tap()
+
+    let coordinateA = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
+    let coordinateB = CLLocationCoordinate2D(latitude: 52.5200, longitude: 13.4050)
+    saveNamedLocation("Shanghai", coordinate: coordinateA, in: app)
+    saveNamedLocation("Berlin", coordinate: coordinateB, in: app)
+
+    let firstRow = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 0
+    )
+    let secondRow = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 1
+    )
+    XCTAssertTrue(firstRow.waitForExistence(timeout: 5))
+    XCTAssertTrue(secondRow.waitForExistence(timeout: 5))
+    XCTAssertTrue(firstRow.label.contains("Shanghai"))
+    XCTAssertTrue(firstRow.label.contains("31.230400"))
+    XCTAssertTrue(secondRow.label.contains("Berlin"))
+    XCTAssertTrue(secondRow.label.contains("52.520000"))
+
+    assertSavedLocationSelectionIsInactive(in: app)
+
+    app.terminate()
+    app.launch()
+    app.tap()
+
+    let persistedFirstRow = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 0
+    )
+    XCTAssertTrue(persistedFirstRow.waitForExistence(timeout: 5))
+    persistedFirstRow.tap()
+    assertSelectedCoordinate(coordinateA, source: "Saved Location", in: app)
+    assertSavedLocationSelectionIsInactive(in: app)
+
+    let persistedSecondRow = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 1
+    )
+    XCTAssertTrue(persistedSecondRow.waitForExistence(timeout: 5))
+    persistedSecondRow.tap()
+    assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
+    assertSavedLocationSelectionIsInactive(in: app)
+
+    let rename = savedLocationButton(
+      withPrefix: "saved-location-rename-",
+      in: app,
+      index: 0
+    )
+    scrollUp(until: rename, in: app)
+    XCTAssertTrue(rename.waitForExistence(timeout: 5))
+    rename.tap()
+    let renameAlert = app.alerts["Rename Saved Location"]
+    XCTAssertTrue(renameAlert.waitForExistence(timeout: 5))
+    let renameField = renameAlert.textFields.firstMatch
+    XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+    replaceRenameText(in: renameField, with: "Shanghai QA", in: renameAlert)
+    app.buttons["saved-location-confirm-rename"].firstMatch.tap()
+    XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Shanghai QA"))
+      .firstMatch.waitForExistence(timeout: 5))
+    assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
+    assertSavedLocationSelectionIsInactive(in: app)
+
+    let deleteSecond = savedLocationButton(
+      withPrefix: "saved-location-delete-",
+      in: app,
+      index: 1
+    )
+    scrollUp(until: deleteSecond, in: app)
+    XCTAssertTrue(deleteSecond.waitForExistence(timeout: 5))
+    deleteSecond.tap()
+    XCTAssertTrue(
+      app.buttons["saved-location-confirm-delete"].firstMatch.waitForExistence(timeout: 5)
+    )
+    app.buttons["saved-location-confirm-delete"].firstMatch.tap()
+    XCTAssertFalse(
+      app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Berlin"))
+        .firstMatch.waitForExistence(timeout: 2)
+    )
+    assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
+    assertSavedLocationSelectionIsInactive(in: app)
+
+    app.terminate()
+    app.launch()
+    app.tap()
+    let persistedRenamed = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 0
+    )
+    XCTAssertTrue(persistedRenamed.waitForExistence(timeout: 5))
+    XCTAssertTrue(
+      persistedRenamed.label.contains("Shanghai QA")
+    )
+    XCTAssertFalse(
+      app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Berlin"))
+        .firstMatch.waitForExistence(timeout: 2)
+    )
+  }
+
+  func testSavedLocationSelectionAndDeletionPreserveAcknowledgedAppliedSimulationUntilExplicitStop() {
+    let app = savedLocationsFixtureApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launch()
+    app.tap()
+
+    let coordinateA = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
+    let coordinateB = CLLocationCoordinate2D(latitude: 52.5200, longitude: 13.4050)
+    saveNamedLocation("Shanghai", coordinate: coordinateA, in: app)
+    saveNamedLocation("Berlin", coordinate: coordinateB, in: app)
+
+    let first = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 0
+    )
+    scrollUp(until: first, in: app)
+    XCTAssertTrue(first.waitForExistence(timeout: 5))
+    first.tap()
+    assertSelectedCoordinate(coordinateA, source: "Saved Location", in: app)
+
+    applyAndAcknowledgeSimulation(in: app)
+    assertAppliedSimulationRemainsActive(in: app)
+
+    let second = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 1
+    )
+    scrollUp(until: second, in: app)
+    XCTAssertTrue(second.waitForExistence(timeout: 5))
+    second.tap()
+    assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
+    assertAppliedSimulationRemainsActive(in: app)
+
+    let deleteSecond = savedLocationButton(
+      withPrefix: "saved-location-delete-",
+      in: app,
+      index: 1
+    )
+    scrollUp(until: deleteSecond, in: app)
+    XCTAssertTrue(deleteSecond.waitForExistence(timeout: 5))
+    deleteSecond.tap()
+    XCTAssertTrue(
+      app.buttons["saved-location-confirm-delete"].firstMatch.waitForExistence(timeout: 5)
+    )
+    app.buttons["saved-location-confirm-delete"].firstMatch.tap()
+    XCTAssertFalse(
+      app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Berlin"))
+        .firstMatch.waitForExistence(timeout: 2)
+    )
+    assertSelectedCoordinate(coordinateB, source: "Saved Location", in: app)
+    assertAppliedSimulationRemainsActive(in: app)
+
+    let stop = app.buttons["stop-simulation"]
+    scrollUp(until: stop, in: app)
+    XCTAssertTrue(stop.waitForExistence(timeout: 5))
+    XCTAssertTrue(stop.isEnabled)
+    stop.tap()
+
+    let cleared = app.staticTexts.matching(identifier: "stop-status")
+      .matching(NSPredicate(format: "label == %@", "Injection Backend cleared"))
+      .firstMatch
+    XCTAssertTrue(cleared.waitForExistence(timeout: 5))
+    let inactive = app.staticTexts.matching(identifier: "simulation-status")
+      .matching(NSPredicate(format: "label == %@", "No Applied Simulation is active."))
+      .firstMatch
+    XCTAssertTrue(inactive.waitForExistence(timeout: 5))
+    scrollToTop(in: app)
+    let inactiveAppliedStatus = app.staticTexts["applied-simulation-status"]
+    XCTAssertTrue(inactiveAppliedStatus.waitForExistence(timeout: 5))
+    XCTAssertTrue(inactiveAppliedStatus.label.hasSuffix("Inactive"))
+  }
+
+  func testSavedLocationSaveFailureKeepsCollectionAndSimulationState() {
+    let app = savedLocationsFixtureApp()
+    app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "zh-Hans"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_CONTROLLER_LINK_FIXTURE"] = "1"
+    app.launchEnvironment["REMOTE_LOCATION_E2E_SAVED_LOCATIONS_FAIL_ON_SAVE_NUMBER"] = "3"
+    app.launch()
+    app.tap()
+
+    let coordinateA = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
+    let coordinateB = CLLocationCoordinate2D(latitude: 52.5200, longitude: 13.4050)
+    saveNamedLocation("Shanghai", coordinate: coordinateA, in: app)
+    saveNamedLocation("Berlin", coordinate: coordinateB, in: app)
+
+    let second = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 1
+    )
+    scrollUp(until: second, in: app)
+    XCTAssertTrue(second.waitForExistence(timeout: 5))
+    second.tap()
+    assertSelectedCoordinate(coordinateB, source: "已保存地点", in: app)
+
+    applyAndAcknowledgeSimulation(in: app, acknowledgedLabelSuffix: "已确认")
+    let firstBeforeFailure = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 0
+    )
+    let secondBeforeFailure = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 1
+    )
+    XCTAssertTrue(firstBeforeFailure.label.contains("Shanghai"))
+    XCTAssertTrue(secondBeforeFailure.label.contains("Berlin"))
+    let firstLabelBeforeFailure = firstBeforeFailure.label
+    let secondLabelBeforeFailure = secondBeforeFailure.label
+
+    let rename = savedLocationButton(
+      withPrefix: "saved-location-rename-",
+      in: app,
+      index: 0
+    )
+    scrollUp(until: rename, in: app)
+    XCTAssertTrue(rename.waitForExistence(timeout: 5))
+    rename.tap()
+    let renameAlert = app.alerts.firstMatch
+    XCTAssertTrue(renameAlert.waitForExistence(timeout: 5))
+    let renameField = renameAlert.textFields.firstMatch
+    XCTAssertTrue(renameField.waitForExistence(timeout: 5))
+    replaceRenameText(in: renameField, with: "Shanghai Failed", in: renameAlert)
+    app.buttons["saved-location-confirm-rename"].firstMatch.tap()
+
+    let error = app.staticTexts["saved-location-persistence-error"]
+    scrollUp(until: error, in: app)
+    XCTAssertTrue(error.waitForExistence(timeout: 5))
+    XCTAssertEqual(error.label, "无法保存已保存地点；现有集合未更改。")
+
+    let firstAfterFailure = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 0
+    )
+    let secondAfterFailure = savedLocationButton(
+      withPrefix: "saved-location-select-",
+      in: app,
+      index: 1
+    )
+    XCTAssertEqual(firstAfterFailure.label, firstLabelBeforeFailure)
+    XCTAssertEqual(secondAfterFailure.label, secondLabelBeforeFailure)
+    assertSelectedCoordinate(coordinateB, source: "已保存地点", in: app)
+    assertAppliedSimulationRemainsActive(in: app, acknowledgedLabelSuffix: "已确认")
+  }
+
   func testPermissionFixturesKeepDeniedAndRestrictedRecoveryDistinct() {
     let denied = permissionFixtureApp(location: "denied", localNetwork: "denied")
     denied.launch()
@@ -717,6 +975,20 @@ final class RemoteLocationLearningUITests: XCTestCase {
     field.typeText(text)
   }
 
+  private func replaceRenameText(
+    in field: XCUIElement,
+    with text: String,
+    in alert: XCUIElement
+  ) {
+    field.tap()
+    if let existing = field.value as? String, !existing.isEmpty,
+      existing != "Saved Location Name"
+    {
+      field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+    }
+    alert.textFields.firstMatch.typeText(text)
+  }
+
   private func openLocationPicker(in app: XCUIApplication) {
     let button = app.buttons["open-location-picker"]
     for _ in 0..<5 where !button.exists {
@@ -887,6 +1159,121 @@ final class RemoteLocationLearningUITests: XCTestCase {
     return value
   }
 
+  private func savedLocationsFixtureApp() -> XCUIApplication {
+    let app = permissionFixtureApp(location: "allowed", localNetwork: "allowed")
+    app.launchEnvironment["REMOTE_LOCATION_E2E_SAVED_LOCATIONS_RESET_TOKEN"] = UUID().uuidString
+    return app
+  }
+
+  private func saveNamedLocation(
+    _ name: String,
+    coordinate: CLLocationCoordinate2D,
+    in app: XCUIApplication
+  ) {
+    scrollToTop(in: app)
+    let latitude = app.textFields["latitude-input"]
+    scrollUp(until: latitude, in: app)
+    XCTAssertTrue(latitude.waitForExistence(timeout: 5))
+    replaceText(in: latitude, with: String(format: "%.6f", coordinate.latitude))
+    replaceText(
+      in: app.textFields["longitude-input"],
+      with: String(format: "%.6f", coordinate.longitude)
+    )
+    app.buttons["Return"].tap()
+    app.buttons["save-selection"].tap()
+
+    let saveCurrent = app.buttons["save-current-location"]
+    scrollUp(until: saveCurrent, in: app)
+    XCTAssertTrue(saveCurrent.waitForExistence(timeout: 5))
+    XCTAssertTrue(saveCurrent.isEnabled)
+    saveCurrent.tap()
+    let saveAlert = app.alerts.firstMatch
+    XCTAssertTrue(saveAlert.waitForExistence(timeout: 5))
+    let nameField = saveAlert.textFields.firstMatch
+    XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+    nameField.tap()
+    nameField.typeText(name)
+    app.buttons["saved-location-confirm-save"].firstMatch.tap()
+    XCTAssertTrue(
+      app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name))
+        .firstMatch.waitForExistence(timeout: 5)
+    )
+  }
+
+  private func applyAndAcknowledgeSimulation(
+    in app: XCUIApplication,
+    acknowledgedLabelSuffix: String = "Acknowledged"
+  ) {
+    let apply = app.buttons["apply-selected-location"]
+    scrollUp(until: apply, in: app)
+    XCTAssertTrue(apply.waitForExistence(timeout: 5))
+    XCTAssertTrue(apply.isEnabled)
+    apply.tap()
+
+    let appliedStatus = app.staticTexts["applied-simulation-status"]
+    scrollToTop(in: app)
+    XCTAssertTrue(appliedStatus.waitForExistence(timeout: 5))
+    XCTAssertTrue(appliedStatus.label.hasSuffix(acknowledgedLabelSuffix))
+  }
+
+  private func assertAppliedSimulationRemainsActive(
+    in app: XCUIApplication,
+    acknowledgedLabelSuffix: String = "Acknowledged"
+  ) {
+    let appliedStatus = app.staticTexts["applied-simulation-status"]
+    scrollToTop(in: app)
+    XCTAssertTrue(appliedStatus.waitForExistence(timeout: 5))
+    XCTAssertTrue(appliedStatus.label.hasSuffix(acknowledgedLabelSuffix))
+
+    let stop = app.buttons["stop-simulation"]
+    scrollUp(until: stop, in: app)
+    XCTAssertTrue(stop.waitForExistence(timeout: 5))
+    XCTAssertTrue(stop.isEnabled)
+  }
+
+  private func savedLocationButton(
+    withPrefix prefix: String,
+    in app: XCUIApplication,
+    index: Int
+  ) -> XCUIElement {
+    scrollToTop(in: app)
+    let savedLocationsAction = app.buttons["save-current-location"]
+    scrollUp(until: savedLocationsAction, in: app)
+    return app.buttons
+      .matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix))
+      .element(boundBy: index)
+  }
+
+  private func assertSavedLocationSelectionIsInactive(in app: XCUIApplication) {
+    let appliedStatus = app.staticTexts["applied-simulation-status"]
+    scrollToTop(in: app)
+    XCTAssertTrue(appliedStatus.waitForExistence(timeout: 5))
+    XCTAssertTrue(appliedStatus.label.hasSuffix("Inactive"))
+  }
+
+  private func assertSelectedCoordinate(
+    _ coordinate: CLLocationCoordinate2D,
+    source: String,
+    in app: XCUIApplication
+  ) {
+    scrollToTop(in: app)
+    let selectedLatitude = app.staticTexts["selected-latitude"]
+    scrollUp(until: selectedLatitude, in: app)
+    XCTAssertTrue(selectedLatitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(
+      selectedLatitude.label.hasSuffix(String(format: "%.6f", coordinate.latitude))
+    )
+    let selectedLongitude = app.staticTexts["selected-longitude"]
+    XCTAssertTrue(selectedLongitude.waitForExistence(timeout: 5))
+    XCTAssertTrue(
+      selectedLongitude.label.hasSuffix(String(format: "%.6f", coordinate.longitude))
+    )
+    let selectionSource = app.staticTexts["selection-source"]
+    scrollUp(until: selectionSource, in: app)
+    XCTAssertTrue(selectionSource.waitForExistence(timeout: 5))
+    XCTAssertTrue(selectionSource.label.hasSuffix(source))
+  }
+
   private func learningApp() -> XCUIApplication {
     let app = XCUIApplication()
     app.launchEnvironment["REMOTE_LOCATION_E2E_APP_LANGUAGE"] = "en"
@@ -918,7 +1305,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
   }
 
   private func scrollUp(until element: XCUIElement, in app: XCUIApplication) {
-    for _ in 0..<8 where !element.exists {
+    for _ in 0..<8 where !element.exists || !element.isHittable {
       app.collectionViews.firstMatch.swipeUp()
     }
   }
@@ -931,7 +1318,7 @@ final class RemoteLocationLearningUITests: XCTestCase {
 
   private func scrollUpInSmallSteps(until element: XCUIElement, in app: XCUIApplication) {
     let collectionView = app.collectionViews.firstMatch
-    for _ in 0..<6 where !element.exists {
+    for _ in 0..<6 where !element.exists || !element.isHittable {
       let start = collectionView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
       let finish = collectionView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
       start.press(forDuration: 0.05, thenDragTo: finish)

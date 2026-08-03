@@ -10,6 +10,13 @@ struct ContentView: View {
   @StateObject private var diagnostics: SimulationDiagnosticsViewModel
   @State private var didRecordLaunch = false
   @State private var showingLocationPicker = false
+  @State private var showingSavedLocationNamePrompt = false
+  @State private var savedLocationName = ""
+  @State private var showingRenameSavedLocationPrompt = false
+  @State private var renamingSavedLocationID: UUID?
+  @State private var renameSavedLocationName = ""
+  @State private var showingDeleteSavedLocationConfirmation = false
+  @State private var deletingSavedLocation: SavedLocation?
   @Environment(\.locale) private var locale
   @Environment(\.openURL) private var openURL
 
@@ -36,6 +43,7 @@ struct ContentView: View {
         controllerLinkSection
         diagnosticsSection
         selectionSection
+        savedLocationsSection
         simulationSection
         observationSection
         baselineSection
@@ -119,6 +127,65 @@ struct ContentView: View {
       if let url = diagnostics.exportedURL {
         SimulationDiagnosticsShareSheet(url: url)
       }
+    }
+    .alert(
+      Text(localized("Save Current Location")),
+      isPresented: $showingSavedLocationNamePrompt
+    ) {
+      TextField(
+        localized("Saved Location Name"),
+        text: $savedLocationName
+      )
+      .accessibilityIdentifier("saved-location-name-input")
+      Button(localized("Save")) {
+        model.saveCurrentLocation(named: savedLocationName)
+      }
+      .accessibilityIdentifier("saved-location-confirm-save")
+      Button(localized("Cancel"), role: .cancel) {}
+      .accessibilityIdentifier("saved-location-cancel-save")
+    } message: {
+      Text(localized("Name the current Selected Location so you can choose it later."))
+    }
+    .alert(
+      Text(localized("Rename Saved Location")),
+      isPresented: $showingRenameSavedLocationPrompt
+    ) {
+      TextField(
+        localized("Saved Location Name"),
+        text: $renameSavedLocationName
+      )
+      .accessibilityIdentifier("saved-location-rename-input")
+      Button(localized("Save")) {
+        if let id = renamingSavedLocationID {
+          model.renameSavedLocation(id: id, to: renameSavedLocationName)
+        }
+      }
+      .accessibilityIdentifier("saved-location-confirm-rename")
+      Button(localized("Cancel"), role: .cancel) {}
+      .accessibilityIdentifier("saved-location-cancel-rename")
+    } message: {
+      Text(localized("Renaming changes only the Saved Location name."))
+    }
+    .confirmationDialog(
+      Text(localized("Delete Saved Location?")),
+      isPresented: $showingDeleteSavedLocationConfirmation
+    ) {
+      Button(localized("Delete"), role: .destructive) {
+        if let savedLocation = deletingSavedLocation {
+          model.deleteSavedLocation(id: savedLocation.id)
+        }
+        deletingSavedLocation = nil
+      }
+      .accessibilityIdentifier("saved-location-confirm-delete")
+      Button(localized("Cancel"), role: .cancel) {}
+      .accessibilityIdentifier("saved-location-cancel-delete")
+    } message: {
+      Text(
+        localizedFormat(
+          "Deleting %@ changes only the Saved Locations collection.",
+          deletingSavedLocation?.name ?? ""
+        )
+      )
     }
   }
 
@@ -354,6 +421,133 @@ struct ContentView: View {
         }
       #endif
     }
+  }
+
+  private var savedLocationsSection: some View {
+    Section {
+      Button {
+        model.clearSavedLocationError()
+        savedLocationName = ""
+        showingSavedLocationNamePrompt = true
+      } label: {
+        Label(localized("Save Current Location"), systemImage: "plus.circle")
+      }
+      .disabled(model.selection.selected == nil)
+      .accessibilityIdentifier("save-current-location")
+
+      if model.savedLocations.locations.isEmpty {
+        Text(localized("No Saved Locations yet."))
+          .foregroundStyle(.secondary)
+          .accessibilityIdentifier("saved-locations-empty")
+      } else {
+        ForEach(model.savedLocations.locations) { savedLocation in
+          savedLocationRow(savedLocation)
+        }
+      }
+
+      if let savedLocationError = model.savedLocationError {
+        Label(
+          localized(savedLocationError),
+          systemImage: "exclamationmark.triangle"
+        )
+          .foregroundStyle(.red)
+          .accessibilityIdentifier(
+            model.savedLocationPersistenceError
+              ? "saved-location-persistence-error"
+              : "saved-location-error"
+          )
+      }
+    } header: {
+      Text(localized("Saved Locations"))
+    } footer: {
+      Text(localized("Saved Locations stay on this iPhone and keep their creation order."))
+    }
+  }
+
+  private func savedLocationRow(_ savedLocation: SavedLocation) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Button {
+        _ = model.select(savedLocation.coordinate, source: .saved)
+      } label: {
+        VStack(alignment: .leading, spacing: 4) {
+          Text(savedLocation.name)
+            .font(.body.weight(.semibold))
+          Text(savedLocationCoordinateDescription(savedLocation.coordinate))
+            .font(.footnote.monospacedDigit())
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .frame(minHeight: 44, alignment: .leading)
+      .accessibilityLabel(
+        Text(
+          localizedFormat(
+            "Choose Saved Location %@ at %@",
+            savedLocation.name,
+            savedLocationCoordinateDescription(savedLocation.coordinate)
+          )
+        )
+      )
+      .accessibilityHint(
+        Text(localized("Replaces Selected Location without applying a simulation."))
+      )
+      .accessibilityIdentifier(
+        "saved-location-select-\(savedLocation.id.uuidString)"
+      )
+
+      Button {
+        model.clearSavedLocationError()
+        renameSavedLocationName = savedLocation.name
+        renamingSavedLocationID = savedLocation.id
+        showingRenameSavedLocationPrompt = true
+      } label: {
+        Image(systemName: "pencil")
+          .frame(width: 44, height: 44)
+      }
+      .buttonStyle(.borderless)
+      .frame(width: 44, height: 44)
+      .contentShape(Rectangle())
+      .accessibilityLabel(
+        Text(localizedFormat("Rename Saved Location %@", savedLocation.name))
+      )
+      .accessibilityIdentifier(
+        "saved-location-rename-\(savedLocation.id.uuidString)"
+      )
+
+      Button {
+        model.clearSavedLocationError()
+        deletingSavedLocation = savedLocation
+        showingDeleteSavedLocationConfirmation = true
+      } label: {
+        Image(systemName: "trash")
+          .foregroundStyle(.red)
+          .frame(width: 44, height: 44)
+      }
+      .buttonStyle(.borderless)
+      .frame(width: 44, height: 44)
+      .contentShape(Rectangle())
+      .accessibilityLabel(
+        Text(localizedFormat("Delete Saved Location %@", savedLocation.name))
+      )
+      .accessibilityIdentifier(
+        "saved-location-delete-\(savedLocation.id.uuidString)"
+      )
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("saved-location-row-\(savedLocation.id.uuidString)")
+  }
+
+  private func savedLocationCoordinateDescription(
+    _ coordinate: SelectedLocation
+  ) -> String {
+    String(
+      format: "%.6f, %.6f",
+      locale: Locale(identifier: "en_US_POSIX"),
+      coordinate.latitude,
+      coordinate.longitude
+    )
   }
 
   private var simulationSection: some View {
@@ -678,6 +872,7 @@ struct ContentView: View {
     case .manual: localized("Manual coordinates")
     case .map: localized("Map")
     case .search: localized("Place search")
+    case .saved: localized("Saved Location")
     }
   }
 

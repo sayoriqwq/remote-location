@@ -2,6 +2,7 @@ public enum LocationSelectionSource: String, Equatable, Sendable {
   case manual
   case map
   case search
+  case saved
 }
 
 public struct LocationSelectionState: Equatable, Sendable {
